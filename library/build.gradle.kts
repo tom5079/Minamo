@@ -1,6 +1,7 @@
 plugins {
     id("com.android.library")
     id("kotlin-android")
+    id("org.jetbrains.dokka")
 }
 
 group = "xyz.quaver"
@@ -40,15 +41,21 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.6.0")
 
-    implementation("androidx.compose.ui:ui:1.0.2")
-    implementation("androidx.compose.ui:ui-tooling:1.0.2")
-    implementation("androidx.compose.foundation:foundation:1.0.2")
-    implementation("androidx.compose.material:material:1.0.2")
-    implementation("androidx.compose.material:material-icons-core:1.0.2")
-    implementation("androidx.compose.material:material-icons-extended:1.0.2")
+    implementation("androidx.compose.ui:ui:1.0.3")
+    implementation("androidx.compose.ui:ui-tooling:1.0.3")
+    implementation("androidx.compose.foundation:foundation:1.0.3")
+    implementation("androidx.compose.material:material:1.0.3")
+    implementation("androidx.compose.material:material-icons-core:1.0.3")
+    implementation("androidx.compose.material:material-icons-extended:1.0.3")
+
+    implementation("org.kodein.log:kodein-log-jvm:0.11.1")
 
     testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.0.2")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.0.3")
     androidTestImplementation("androidx.test.ext:junit:1.1.3")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
+}
+
+dependencies {
+    dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.5.30")
 }
