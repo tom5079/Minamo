@@ -1,5 +1,6 @@
 package xyz.quaver.graphics.subsampledimage.sample
 
+import android.graphics.BitmapRegionDecoder
 import org.junit.Test
 
 import org.junit.Assert.*
