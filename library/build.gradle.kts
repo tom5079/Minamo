@@ -11,7 +11,7 @@ android {
     compileSdk = 31
 
     defaultConfig {
-        minSdk = 16
+        minSdk = 21
         targetSdk = 31
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -36,6 +36,12 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.0.2"
     }
+
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
 }
 
 dependencies {
@@ -54,8 +60,8 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.0.5")
     androidTestImplementation("androidx.test.ext:junit:1.1.3")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
-}
 
-dependencies {
     dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.5.30")
+
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.1.5")
 }

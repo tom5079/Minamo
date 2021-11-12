@@ -223,9 +223,7 @@ fun SubsampledImage(
             }
         }
 
-    /** Bitmap of whole image with lower resolution that acts like a base layer
-     * limited to 10MB RAM or 480px width or height whichever is smaller
-     */
+    // Bitmap of whole image with lower resolution that acts like a base layer
     val baseTile: ImageBitmap? = remember(canvasSize, imageSize) {
         canvasSize?.let { canvasSize ->
         imageSize?.let { imageSize ->
@@ -241,15 +239,15 @@ fun SubsampledImage(
         }
         canvasSize?.let { canvasSize ->
         state.imageRect?.let { imageRect ->
-        imageSize?.let { (imageWidth, imageHeight) ->
+        imageSize?.let { imageSize ->
             val targetScale =
-                min(imageRect.width / imageWidth, imageRect.height / imageHeight)
+                min(imageRect.width / imageSize.width, imageRect.height / imageSize.height)
 
             val sampleSize = calculateSampleSize(targetScale)
 
             if (value?.firstOrNull()?.sampleSize == sampleSize) return@produceState
 
-            val maxSampleSize = getMaxSampleSize(canvasSize, imageSize!!)
+            val maxSampleSize = getMaxSampleSize(canvasSize, imageSize)
 
             logger.debug {
                 """
@@ -262,21 +260,21 @@ fun SubsampledImage(
             }
 
             value = mutableListOf<Tile>().apply {
-                val tileWidth = imageWidth * sampleSize / maxSampleSize
-                val tileHeight = imageHeight * sampleSize / maxSampleSize
+                val tileWidth = imageSize.width * sampleSize / maxSampleSize
+                val tileHeight = imageSize.height * sampleSize / maxSampleSize
 
                 var y = 0f
 
-                while (y < imageHeight) {
+                while (y < imageSize.height) {
                     var x = 0f
-                    while (x < imageWidth) {
+                    while (x < imageSize.width) {
                         add(
                             Tile(
                                 Rect(
                                     Offset(x, y),
                                     Size(
-                                        if (x + tileWidth > imageWidth) imageWidth - x else tileWidth,
-                                        if (y + tileHeight > imageHeight) imageHeight - y else tileHeight
+                                        if (x + tileWidth > imageSize.width) imageSize.width - x else tileWidth,
+                                        if (y + tileHeight > imageSize.height) imageSize.height - y else tileHeight
                                     )
                                 ),
                                 sampleSize
