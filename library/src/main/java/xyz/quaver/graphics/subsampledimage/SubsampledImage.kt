@@ -224,27 +224,14 @@ fun SubsampledImage(
         }
 
     /** Bitmap of whole image with lower resolution that acts like a base layer
-     * limited to 10MB RAM or 360px width or height whichever is smaller
+     * limited to 10MB RAM or 480px width or height whichever is smaller
      */
-    val baseTile: ImageBitmap? = remember(imageSize) {
+    val baseTile: ImageBitmap? = remember(canvasSize, imageSize) {
+        canvasSize?.let { canvasSize ->
         imageSize?.let { imageSize ->
-        decoder?.let { decoder ->
-            val limitedRamScale = 10*1024*1024 / imageSize.width * imageSize.height * 2 // Assumes image is decoded in RGB_565
-            val limitedScale = min(360 / imageSize.width, 360 / imageSize.height)
-
-            val targetScale = min(limitedRamScale, limitedScale)
-
-            val sampleSize = calculateSampleSize(targetScale)
-
-            logger.debug {
-                """
-                    baseTile sampleSize $sampleSize (${imageSize.width / sampleSize} x ${imageSize.height / sampleSize})
-                """.trimIndent()
-            }
-
-            decoder.decodeRegion(Rect(Offset(0f, 0f), imageSize).toAndroidRect(), BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-            }).asImageBitmap()
+            decoder?.decodeRegion(Rect(Offset(0f, 0f), imageSize).toAndroidRect(), BitmapFactory.Options().apply {
+                inSampleSize = getMaxSampleSize(canvasSize, imageSize)
+            })?.asImageBitmap()
         } }
     }
 
@@ -254,57 +241,54 @@ fun SubsampledImage(
         }
         canvasSize?.let { canvasSize ->
         state.imageRect?.let { imageRect ->
-            imageSize?.let { (imageWidth, imageHeight) ->
-                val targetScale =
-                    min(imageRect.width / imageWidth, imageRect.height / imageHeight)
+        imageSize?.let { (imageWidth, imageHeight) ->
+            val targetScale =
+                min(imageRect.width / imageWidth, imageRect.height / imageHeight)
 
-                var sampleSize = calculateSampleSize(targetScale)
+            val sampleSize = calculateSampleSize(targetScale)
 
-                if (value?.firstOrNull()?.sampleSize == sampleSize) return@produceState
+            if (value?.firstOrNull()?.sampleSize == sampleSize) return@produceState
 
-                val minScale =
-                    min(canvasSize.width / imageWidth, canvasSize.height / imageHeight)
-                var maxSampleSize = calculateSampleSize(minScale)
+            val maxSampleSize = getMaxSampleSize(canvasSize, imageSize!!)
 
-                logger.debug {
-                    """
-                    tiles
-                    TargetRect $imageRect
-                    TargetScale $targetScale
-                    SampleSize $sampleSize
-                    MaxSampleSize $maxSampleSize
-                    """.trim()
+            logger.debug {
+                """
+                tiles
+                TargetRect $imageRect
+                TargetScale $targetScale
+                SampleSize $sampleSize
+                MaxSampleSize $maxSampleSize
+                """.trim()
+            }
+
+            value = mutableListOf<Tile>().apply {
+                val tileWidth = imageWidth * sampleSize / maxSampleSize
+                val tileHeight = imageHeight * sampleSize / maxSampleSize
+
+                var y = 0f
+
+                while (y < imageHeight) {
+                    var x = 0f
+                    while (x < imageWidth) {
+                        add(
+                            Tile(
+                                Rect(
+                                    Offset(x, y),
+                                    Size(
+                                        if (x + tileWidth > imageWidth) imageWidth - x else tileWidth,
+                                        if (y + tileHeight > imageHeight) imageHeight - y else tileHeight
+                                    )
+                                ),
+                                sampleSize
+                            )
+                        )
+                        x += tileWidth
+                    }
+                    y += tileHeight
                 }
 
-                value = mutableListOf<Tile>().apply {
-                    val tileWidth = imageWidth * sampleSize / maxSampleSize
-                    val tileHeight = imageHeight * sampleSize / maxSampleSize
-
-                    var y = 0f
-
-                    while (y < imageHeight) {
-                        var x = 0f
-                        while (x < imageWidth) {
-                            add(
-                                Tile(
-                                    Rect(
-                                        Offset(x, y),
-                                        Size(
-                                            if (x + tileWidth > imageWidth) imageWidth - x else tileWidth,
-                                            if (y + tileHeight > imageHeight) imageHeight - y else tileHeight
-                                        )
-                                    ),
-                                    sampleSize
-                                )
-                            )
-                            x += tileWidth
-                        }
-                        y += tileHeight
-                    }
-
-                }.toList()
-            }
-        } }
+            }.toList()
+        } } }
     }
 
     LaunchedEffect(state.imageRect) {
@@ -318,6 +302,9 @@ fun SubsampledImage(
             )
 
             tiles?.forEach { tile ->
+                // use baseTile if available
+                if (tile.sampleSize == getMaxSampleSize(canvasSize, imageSize)) return@forEach
+
                 val widthRatio = imageRect.width / imageSize.width
                 val heightRatio = imageRect.height / imageSize.height
 
@@ -406,7 +393,7 @@ fun SubsampledImage(
             .pointerInput(Unit) {
                 detectTapGestures(onDoubleTap = { centroid ->
                     coroutineScope.launch {
-                        state.zoom(0.5f, centroid, true)
+                        state.zoom(1f, centroid, true)
                     }
                 })
             }
