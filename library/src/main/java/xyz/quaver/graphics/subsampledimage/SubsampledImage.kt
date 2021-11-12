@@ -25,11 +25,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.kodein.log.Logger
+import org.kodein.log.frontend.defaultLogFrontend
+import java.util.concurrent.Executors
 import kotlin.math.min
 
 private val logger = Logger(
     tag = Logger.Tag("xyz.quaver.graphics.subsampledimage.SubsampledImage", "SubsampledImage"),
-    frontEnds = emptyList()//listOf(defaultLogFrontend)
+    frontEnds = listOf(defaultLogFrontend)
 )
 
 @Composable
@@ -81,10 +83,17 @@ class SubsampledImageState {
     }
 }
 
+/**
+ * [rect] is in image's coordinate
+ */
 internal data class Tile(
     val rect: Rect,
     val sampleSize: Int
 ) {
+    companion object {
+        private val tileLoadCoroutineScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
+    }
+
     private val mutex = Mutex()
     private var loadingJob: Job? = null
     var bitmap by mutableStateOf<ImageBitmap?>(null)
@@ -92,15 +101,24 @@ internal data class Tile(
     suspend fun load(decoder: BitmapRegionDecoder) = coroutineScope {
         loadingJob?.cancel()
 
-        loadingJob = launch(Dispatchers.IO) {
+        if (bitmap != null) return@coroutineScope
+
+        loadingJob = tileLoadCoroutineScope.launch {
+            val time = System.currentTimeMillis()
+
+            logger.debug {
+                "Loading Bitmap on ${Thread.currentThread().name}"
+            }
+
             decoder.decodeRegion(rect.toAndroidRect(), BitmapFactory.Options().apply {
                 inSampleSize = sampleSize
             }).asImageBitmap().let {
-                yield()
+                if (!isActive) return@let
                 mutex.withLock {
-                    yield()
+                    if (!isActive) return@withLock
                     bitmap = it
                 }
+                logger.debug { "Finished loading bitmap in ${System.currentTimeMillis() - time} ms" }
             }
         }
     }
@@ -195,7 +213,7 @@ fun SubsampledImage(
         LaunchedEffect(canvasSize, imageSize) {
             canvasSize?.let { canvasSize ->
                 imageSize?.let { imageSize ->
-                    logger.info {
+                    logger.debug {
                         "initializing imageRect"
                     }
                     state.imageRect = scaleType.invoke(canvasSize, imageSize)
@@ -207,6 +225,7 @@ fun SubsampledImage(
         logger.info {
             "imageRect size: ${state.imageRect?.size}"
         }
+        canvasSize?.let { canvasSize ->
         state.imageRect?.let { imageRect ->
             imageSize?.let { (imageWidth, imageHeight) ->
                 val targetScale =
@@ -253,7 +272,37 @@ fun SubsampledImage(
 
                 }.toList()
             }
-        }
+        } }
+    }
+
+    LaunchedEffect(state.imageRect) {
+        imageSize?.let { imageSize ->
+        canvasSize?.let { canvasSize ->
+        decoder?.let { decoder ->
+        state.imageRect?.let { imageRect ->
+            val canvasRect = Rect(
+                Offset(0f, 0f),
+                canvasSize
+            )
+
+            tiles?.forEach { tile ->
+                val widthRatio = imageRect.width / imageSize.width
+                val heightRatio = imageRect.height / imageSize.height
+
+                val tileRect = Rect(
+                    Offset(
+                        imageRect.left + tile.rect.left * widthRatio,
+                        imageRect.top + tile.rect.top * heightRatio
+                    ),
+                    Size(
+                        tile.rect.width * widthRatio,
+                        tile.rect.height * heightRatio
+                    )
+                )
+
+                if (canvasRect.overlaps(tileRect)) tile.load(decoder) else tile.unload()
+            }
+        } } } }
     }
 
     val flingSpec = rememberSplineBasedDecay<Float>()
