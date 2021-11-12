@@ -234,19 +234,27 @@ fun SubsampledImage(
 
                 while (targetScale <= 1f / (sampleSize * 2)) sampleSize *= 2
 
+                if (value?.firstOrNull()?.sampleSize == sampleSize) return@produceState
+
+                val minScale =
+                    min(canvasSize.width / imageWidth, canvasSize.height / imageHeight)
+                var maxSampleSize = 1
+
+                while (minScale <= 1f / (maxSampleSize * 2)) maxSampleSize *= 2
+
                 logger.debug {
                     """
+                    tiles
                     TargetRect $imageRect
                     TargetScale $targetScale
                     SampleSize $sampleSize
+                    MaxSampleSize $maxSampleSize
                     """.trim()
                 }
 
-                if (value?.firstOrNull()?.sampleSize == sampleSize) return@produceState
-
                 value = mutableListOf<Tile>().apply {
-                    val tileWidth = 500f * sampleSize
-                    val tileHeight = 500f * sampleSize
+                    val tileWidth = imageWidth * sampleSize / maxSampleSize
+                    val tileHeight = imageHeight * sampleSize / maxSampleSize
 
                     var y = 0f
 
