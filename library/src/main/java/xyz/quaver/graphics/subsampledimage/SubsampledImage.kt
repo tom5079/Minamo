@@ -1,5 +1,6 @@
 package xyz.quaver.graphics.subsampledimage
 
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.BitmapRegionDecoder
 import androidx.compose.animation.core.*
@@ -28,6 +29,7 @@ import org.kodein.log.Logger
 import org.kodein.log.frontend.defaultLogFrontend
 import java.util.concurrent.Executors
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 private val logger = Logger(
     tag = Logger.Tag("xyz.quaver.graphics.subsampledimage.SubsampledImage", "SubsampledImage"),
@@ -221,6 +223,31 @@ fun SubsampledImage(
             }
         }
 
+    /** Bitmap of whole image with lower resolution that acts like a base layer
+     * limited to 10MB RAM or 360px width or height whichever is smaller
+     */
+    val baseTile: ImageBitmap? = remember(imageSize) {
+        imageSize?.let { imageSize ->
+        decoder?.let { decoder ->
+            val limitedRamScale = 10*1024*1024 / imageSize.width * imageSize.height * 2 // Assumes image is decoded in RGB_565
+            val limitedScale = min(360 / imageSize.width, 360 / imageSize.height)
+
+            val targetScale = min(limitedRamScale, limitedScale)
+
+            val sampleSize = calculateSampleSize(targetScale)
+
+            logger.debug {
+                """
+                    baseTile sampleSize $sampleSize (${imageSize.width / sampleSize} x ${imageSize.height / sampleSize})
+                """.trimIndent()
+            }
+
+            decoder.decodeRegion(Rect(Offset(0f, 0f), imageSize).toAndroidRect(), BitmapFactory.Options().apply {
+                inSampleSize = sampleSize
+            }).asImageBitmap()
+        } }
+    }
+
     val tiles by produceState<List<Tile>?>(null, imageSize, state.imageRect?.size) {
         logger.info {
             "imageRect size: ${state.imageRect?.size}"
@@ -230,17 +257,14 @@ fun SubsampledImage(
             imageSize?.let { (imageWidth, imageHeight) ->
                 val targetScale =
                     min(imageRect.width / imageWidth, imageRect.height / imageHeight)
-                var sampleSize = 1
 
-                while (targetScale <= 1f / (sampleSize * 2)) sampleSize *= 2
+                var sampleSize = calculateSampleSize(targetScale)
 
                 if (value?.firstOrNull()?.sampleSize == sampleSize) return@produceState
 
                 val minScale =
                     min(canvasSize.width / imageWidth, canvasSize.height / imageHeight)
-                var maxSampleSize = 1
-
-                while (minScale <= 1f / (maxSampleSize * 2)) maxSampleSize *= 2
+                var maxSampleSize = calculateSampleSize(minScale)
 
                 logger.debug {
                     """
@@ -395,41 +419,59 @@ fun SubsampledImage(
         }
 
         imageSize?.let { imageSize ->
-            state.imageRect?.let { imageRect ->
-                tiles?.forEach { tile ->
-                    val widthRatio = imageRect.width / imageSize.width
-                    val heightRatio = imageRect.height / imageSize.height
+        state.imageRect?.let { imageRect ->
+            tiles?.forEach { tile ->
+                val widthRatio = imageRect.width / imageSize.width
+                val heightRatio = imageRect.height / imageSize.height
 
-                    val tileRect = Rect(
-                        Offset(
-                            imageRect.left + tile.rect.left * widthRatio,
-                            imageRect.top + tile.rect.top * heightRatio
-                        ),
-                        Size(
-                            tile.rect.width * widthRatio,
-                            tile.rect.height * heightRatio
-                        )
+                val tileRect = Rect(
+                    Offset(
+                        imageRect.left + tile.rect.left * widthRatio,
+                        imageRect.top + tile.rect.top * heightRatio
+                    ),
+                    Size(
+                        tile.rect.width * widthRatio,
+                        tile.rect.height * heightRatio
+                    )
+                )
+
+                tile.bitmap?.let { bitmap ->
+                    drawImage(
+                        bitmap,
+                        srcOffset = IntOffset.Zero,
+                        srcSize = IntSize(bitmap.width, bitmap.height),
+                        dstOffset = tileRect.topLeft.toIntOffset(),
+                        dstSize = tileRect.size.toIntSize()
+                    )
+                } ?: baseTile?.let { baseTile ->
+                    val baseTileRect = Rect(
+                        tile.rect.left / imageSize.width * baseTile.width,
+                        tile.rect.top / imageSize.height * baseTile.height,
+                        tile.rect.right / imageSize.width * baseTile.width,
+                        tile.rect.bottom / imageSize.height * baseTile.height,
                     )
 
-                    tile.bitmap?.let { bitmap ->
-                        drawImage(
-                            bitmap,
-                            srcOffset = IntOffset.Zero,
-                            srcSize = IntSize(bitmap.width, bitmap.height),
-                            dstOffset = IntOffset(tileRect.left.toInt(), tileRect.top.toInt()),
-                            dstSize = IntSize(tileRect.width.toInt(), tileRect.height.toInt())
-                        )
+                    logger.debug {
+                        "baseTileRect $baseTileRect"
                     }
 
-                    drawRect(
-                        Color.Cyan,
-                        tileRect.topLeft,
-                        tileRect.size,
-                        style = Stroke(width = 5f)
+                    drawImage(
+                        baseTile,
+                        srcOffset = baseTileRect.topLeft.toIntOffset(),
+                        srcSize = baseTileRect.size.toIntSize(),
+                        dstOffset = tileRect.topLeft.toIntOffset(),
+                        dstSize = tileRect.size.toIntSize()
                     )
                 }
+
+                drawRect(
+                    Color.Cyan,
+                    tileRect.topLeft,
+                    tileRect.size,
+                    style = Stroke(width = 5f)
+                )
             }
-        }
+        } }
     }
 }
 
