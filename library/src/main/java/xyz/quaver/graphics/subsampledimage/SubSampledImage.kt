@@ -54,8 +54,7 @@ private val logger = Logger(
 fun SubSampledImage(
     modifier: Modifier = Modifier,
     image: ByteArray? = null,
-    state: SubSampledImageState = rememberSubSampledImageState(),
-    scaleType: ScaleType = ScaleTypes.CENTER_INSIDE
+    state: SubSampledImageState = rememberSubSampledImageState()
 ) {
     val coroutineScope = rememberCoroutineScope()
 
