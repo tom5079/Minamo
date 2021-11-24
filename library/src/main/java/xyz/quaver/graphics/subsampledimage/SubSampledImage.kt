@@ -274,7 +274,7 @@ fun SubSampledImage(
                                         }
                                     }
 
-                                    if (event.changes.all { !it.pressed }) {
+                                    if (event.changes.all { !it.pressed } && event.calculateCentroidSize() > 0f) {
                                         // Prevent lastDragPeriod = 0
                                         lastDragPeriod += 1
 
