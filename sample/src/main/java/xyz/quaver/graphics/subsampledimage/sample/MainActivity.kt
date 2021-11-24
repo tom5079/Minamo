@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
-import xyz.quaver.graphics.subsampledimage.SubsampledImage
+import xyz.quaver.graphics.subsampledimage.SubSampledImage
 import xyz.quaver.graphics.subsampledimage.sample.ui.theme.SubSamplingImageViewTheme
 
 class MainActivity : ComponentActivity() {
@@ -31,7 +31,7 @@ class MainActivity : ComponentActivity() {
                         logger.debug {
                             "Image ByteArray ${it.size} bytes"
                         }
-                        SubsampledImage(modifier = Modifier.fillMaxSize(), image = it)
+                        SubSampledImage(modifier = Modifier.fillMaxSize(), image = it)
                     }
                 }
             }

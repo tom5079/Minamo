@@ -35,7 +35,7 @@ private val logger = Logger(
 
 @Preview
 @Composable
-fun SubsampledImage(
+fun SubSampledImage(
     modifier: Modifier = Modifier,
     image: ByteArray? = null,
     state: SubSampledImageState = rememberSubSampledImageState(),
@@ -352,13 +352,6 @@ fun SubsampledImage(
                         dstSize = tileRect.size.toIntSize()
                     )
                 }
-
-                drawRect(
-                    Color.Cyan,
-                    tileRect.topLeft,
-                    tileRect.size,
-                    style = Stroke(width = 5f)
-                )
             }
         } }
     }
