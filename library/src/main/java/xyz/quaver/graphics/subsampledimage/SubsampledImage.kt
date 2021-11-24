@@ -21,12 +21,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.kodein.log.Logger
 import org.kodein.log.frontend.defaultLogFrontend
-import java.time.Instant
-import java.util.concurrent.Executors
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.min
@@ -36,156 +32,16 @@ private val logger = Logger(
     frontEnds = listOf(defaultLogFrontend)
 )
 
-@Composable
-fun rememberSubsampledImageState() = remember {
-    SubsampledImageState()
-}
-
-class SubsampledImageState {
-    /**
-     * Represents the area the image will occupy in canvas's coordinate
-     */
-    var imageRect by mutableStateOf<Rect?>(null)
-
-    private var zoomAnimationJob: Job? = null
-    /**
-     * Enlarge [imageRect] by [amount] centered around [centroid]
-     *
-     * For example, [amount] 0.2 inflates [imageRect] by 20%
-     *              [amount] -0.2 deflates [imageRect] by 20%
-     */
-    suspend fun zoom(amount: Float, centroid: Offset, isAnimated: Boolean = false) = coroutineScope {
-        zoomAnimationJob?.cancelAndJoin()
-
-        zoomAnimationJob = launch {
-            imageRect?.let { imageRect ->
-                val animationSpec: AnimationSpec<Float> = if (isAnimated) spring() else snap()
-
-                val anim = AnimationState(
-                    initialValue = 0f,
-                    initialVelocity = 0f
-                )
-
-                anim.animateTo(
-                    targetValue = amount,
-                    animationSpec = animationSpec,
-                    sequentialAnimation = false
-                ) {
-                    if (!this@launch.isActive) cancelAnimation()
-
-                    this@SubsampledImageState.imageRect = Rect(
-                        imageRect.left + (imageRect.left - centroid.x) * value,
-                        imageRect.top + (imageRect.top - centroid.y) * value,
-                        imageRect.right + (imageRect.right - centroid.x) * value,
-                        imageRect.bottom + (imageRect.bottom - centroid.y) * value
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * [rect] is in image's coordinate
- */
-internal data class Tile(
-    val rect: Rect,
-    val sampleSize: Int
-) {
-    companion object {
-        private val tileLoadCoroutineScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
-    }
-
-    private val mutex = Mutex()
-    private var loadingJob: Job? = null
-    var bitmap by mutableStateOf<ImageBitmap?>(null)
-
-    suspend fun load(decoder: BitmapRegionDecoder) = coroutineScope {
-        loadingJob?.cancel()
-
-        if (bitmap != null) return@coroutineScope
-
-        loadingJob = tileLoadCoroutineScope.launch {
-            val time = System.currentTimeMillis()
-
-            logger.debug {
-                "Loading Bitmap on ${Thread.currentThread().name}"
-            }
-
-            decoder.decodeRegion(rect.toAndroidRect(), BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-            }).asImageBitmap().let {
-                if (!isActive) return@let
-                mutex.withLock {
-                    if (!isActive) return@withLock
-                    bitmap = it
-                }
-                logger.debug { "Finished loading bitmap in ${System.currentTimeMillis() - time} ms" }
-            }
-        }
-    }
-
-    suspend fun unload() {
-        loadingJob?.cancel()
-
-        mutex.withLock {
-            bitmap = null
-        }
-    }
-}
-
-typealias ScaleType = (canvasSize: Size, imageSize: Size) -> Rect
-
-object ScaleTypes {
-    val CENTER_INSIDE: ScaleType = { (canvasWidth, canvasHeight), (imageWidth, imageHeight) ->
-        val imageAspectRatio = imageWidth / imageHeight
-        val canvasAspectRatio = canvasWidth / canvasHeight
-
-        if (canvasAspectRatio > imageAspectRatio) // Canvas is wider than the image; Fit height
-            Rect(
-                Offset(
-                    (canvasWidth - imageAspectRatio * canvasHeight) / 2,
-                    0F
-                ),
-                Size(imageAspectRatio * canvasHeight, canvasHeight)
-            )
-        else // Canvas is narrower than or the same as the image; Fit width
-            Rect(
-                Offset(
-                    0F,
-                    (canvasHeight - canvasWidth / imageAspectRatio) / 2
-                ),
-                Size(canvasWidth, canvasWidth / imageAspectRatio)
-            )
-    }
-
-    val CENTER: ScaleType = { (canvasWidth, canvasHeight), (imageWidth, imageHeight) ->
-        Rect(
-            Offset(
-                canvasWidth - imageWidth, canvasHeight - imageHeight
-            ),
-            Size(
-                imageWidth, imageHeight
-            )
-        )
-    }
-
-    val FIT_XY: ScaleType = { canvasSize, _ ->
-        Rect(Offset.Zero, canvasSize)
-    }
-}
 
 @Preview
 @Composable
 fun SubsampledImage(
     modifier: Modifier = Modifier,
     image: ByteArray? = null,
-    state: SubsampledImageState = rememberSubsampledImageState(),
+    state: SubSampledImageState = rememberSubSampledImageState(),
     scaleType: ScaleType = ScaleTypes.CENTER_INSIDE
 ) {
     val coroutineScope = rememberCoroutineScope()
-
-    var canvasSize by remember { mutableStateOf<Size?>(null) }
 
     val decoder = remember(image) {
         image?.let { image ->
@@ -193,8 +49,8 @@ fun SubsampledImage(
         }
     }
 
-    val imageSize by produceState<Size?>(null, image) {
-        value = image?.let { image ->
+    LaunchedEffect(image) {
+        state.imageSize = image?.let { image ->
             withContext(Dispatchers.Unconfined) {
                 with(BitmapFactory.Options().apply {
                     inJustDecodeBounds = true
@@ -212,34 +68,31 @@ fun SubsampledImage(
     }
 
     if (state.imageRect == null)
-        LaunchedEffect(canvasSize, imageSize) {
-            canvasSize?.let { canvasSize ->
-                imageSize?.let { imageSize ->
-                    logger.debug {
-                        "initializing imageRect"
-                    }
-                    state.imageRect = scaleType.invoke(canvasSize, imageSize)
-                }
+        LaunchedEffect(state.canvasSize, state.imageSize) {
+            logger.debug {
+                "initializing imageRect"
             }
+
+            state.resetImageRect()
         }
 
     // Bitmap of whole image with lower resolution that acts like a base layer
-    val baseTile: ImageBitmap? = remember(canvasSize, imageSize) {
-        canvasSize?.let { canvasSize ->
-        imageSize?.let { imageSize ->
+    val baseTile: ImageBitmap? = remember(state.canvasSize, state.imageSize) {
+        state.canvasSize?.let { canvasSize ->
+        state.imageSize?.let { imageSize ->
             decoder?.decodeRegion(Rect(Offset(0f, 0f), imageSize).toAndroidRect(), BitmapFactory.Options().apply {
                 inSampleSize = getMaxSampleSize(canvasSize, imageSize)
             })?.asImageBitmap()
         } }
     }
 
-    val tiles by produceState<List<Tile>?>(null, imageSize, state.imageRect?.size) {
+    val tiles by produceState<List<Tile>?>(null, state.imageSize, state.imageRect?.size) {
         logger.info {
             "imageRect size: ${state.imageRect?.size}"
         }
-        canvasSize?.let { canvasSize ->
+        state.canvasSize?.let { canvasSize ->
         state.imageRect?.let { imageRect ->
-        imageSize?.let { imageSize ->
+        state.imageSize?.let { imageSize ->
             val targetScale =
                 min(imageRect.width / imageSize.width, imageRect.height / imageSize.height)
 
@@ -290,8 +143,8 @@ fun SubsampledImage(
     }
 
     LaunchedEffect(state.imageRect) {
-        imageSize?.let { imageSize ->
-        canvasSize?.let { canvasSize ->
+        state.imageSize?.let { imageSize ->
+        state.canvasSize?.let { canvasSize ->
         decoder?.let { decoder ->
         state.imageRect?.let { imageRect ->
             val canvasRect = Rect(
@@ -335,12 +188,12 @@ fun SubsampledImage(
                         zoom $zoom
                     """.trimIndent()
             }
-            state.imageRect = Rect(
-                    it.left + pan.x + (it.left - centroid.x) * (zoom - 1),
-                    it.top + pan.y + (it.top - centroid.y) * (zoom - 1),
-                    it.right + pan.x + (it.right - centroid.x) * (zoom - 1),
-                    it.bottom + pan.y + (it.bottom - centroid.y) * (zoom - 1)
-            )
+            state.setImageRectWithBound(Rect(
+                it.left + pan.x + (it.left - centroid.x) * (zoom - 1),
+                it.top + pan.y + (it.top - centroid.y) * (zoom - 1),
+                it.right + pan.x + (it.right - centroid.x) * (zoom - 1),
+                it.bottom + pan.y + (it.bottom - centroid.y) * (zoom - 1)
+            ))
         }
     }
 
@@ -428,7 +281,7 @@ fun SubsampledImage(
                                                     "fling $delta"
                                                 }
                                                 state.imageRect?.let {
-                                                    state.imageRect = it.translate(flingVector * delta)
+                                                    state.setImageRectWithBound(it.translate(flingVector * delta))
                                                 }
                                                 lastValue = value
                                             }
@@ -448,13 +301,13 @@ fun SubsampledImage(
             }
     ) {
         if (size.width != 0F && size.height != 0F)
-            canvasSize = size.copy()
+            state.canvasSize = size.copy()
 
         logger.debug {
-            "Canvas Size $canvasSize"
+            "Canvas Size $state.canvasSize"
         }
 
-        imageSize?.let { imageSize ->
+        state.imageSize?.let { imageSize ->
         state.imageRect?.let { imageRect ->
             tiles?.forEach { tile ->
                 val widthRatio = imageRect.width / imageSize.width
