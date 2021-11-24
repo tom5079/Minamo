@@ -20,7 +20,7 @@ import java.util.concurrent.Executors
 /**
  * [rect] is in image's coordinate
  */
-internal data class Tile(
+data class Tile(
     val rect: Rect,
     val sampleSize: Int
 ) {

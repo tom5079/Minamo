@@ -77,16 +77,16 @@ fun SubSampledImage(
         }
 
     // Bitmap of whole image with lower resolution that acts like a base layer
-    val baseTile: ImageBitmap? = remember(state.canvasSize, state.imageSize) {
+    LaunchedEffect(state.canvasSize, state.imageSize) {
         state.canvasSize?.let { canvasSize ->
         state.imageSize?.let { imageSize ->
-            decoder?.decodeRegion(Rect(Offset(0f, 0f), imageSize).toAndroidRect(), BitmapFactory.Options().apply {
+            state.baseTile = decoder?.decodeRegion(Rect(Offset(0f, 0f), imageSize).toAndroidRect(), BitmapFactory.Options().apply {
                 inSampleSize = getMaxSampleSize(canvasSize, imageSize)
             })?.asImageBitmap()
         } }
     }
 
-    val tiles by produceState<List<Tile>?>(null, state.imageSize, state.imageRect?.size) {
+    LaunchedEffect(state.imageSize, state.imageRect?.size) {
         logger.info {
             "imageRect size: ${state.imageRect?.size}"
         }
@@ -98,7 +98,7 @@ fun SubSampledImage(
 
             val sampleSize = calculateSampleSize(targetScale)
 
-            if (value?.firstOrNull()?.sampleSize == sampleSize) return@produceState
+            if (state.tiles?.firstOrNull()?.sampleSize == sampleSize) return@LaunchedEffect
 
             val maxSampleSize = getMaxSampleSize(canvasSize, imageSize)
 
@@ -112,7 +112,7 @@ fun SubSampledImage(
                 """.trim()
             }
 
-            value = mutableListOf<Tile>().apply {
+            state.tiles = mutableListOf<Tile>().apply {
                 val tileWidth = imageSize.width * sampleSize / maxSampleSize
                 val tileHeight = imageSize.height * sampleSize / maxSampleSize
 
@@ -152,7 +152,7 @@ fun SubSampledImage(
                 canvasSize
             )
 
-            tiles?.forEach { tile ->
+            state.tiles?.forEach { tile ->
                 // use baseTile if available
                 if (tile.sampleSize == getMaxSampleSize(canvasSize, imageSize)) return@forEach
 
@@ -309,7 +309,7 @@ fun SubSampledImage(
 
         state.imageSize?.let { imageSize ->
         state.imageRect?.let { imageRect ->
-            tiles?.forEach { tile ->
+            state.tiles?.forEach { tile ->
                 val widthRatio = imageRect.width / imageSize.width
                 val heightRatio = imageRect.height / imageSize.height
 
@@ -332,7 +332,7 @@ fun SubSampledImage(
                         dstOffset = tileRect.topLeft.toIntOffset(),
                         dstSize = tileRect.size.toIntSize()
                     )
-                } ?: baseTile?.let { baseTile ->
+                } ?: state.baseTile?.let { baseTile ->
                     val baseTileRect = Rect(
                         tile.rect.left / imageSize.width * baseTile.width,
                         tile.rect.top / imageSize.height * baseTile.height,

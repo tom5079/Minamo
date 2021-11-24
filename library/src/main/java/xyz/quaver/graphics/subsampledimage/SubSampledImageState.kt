@@ -5,6 +5,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.*
 
 @Composable
@@ -17,6 +18,15 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
         internal set
 
     var imageSize by mutableStateOf<Size?>(null)
+        internal set
+
+    /**
+     * Image decoded as a lowest possible size that fits canvasSize to serve as a base layer
+     */
+    var baseTile: ImageBitmap? = null
+        internal set
+
+    var tiles by mutableStateOf<List<Tile>?>(null)
         internal set
 
     /**
