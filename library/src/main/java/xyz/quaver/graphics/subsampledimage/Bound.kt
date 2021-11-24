@@ -39,7 +39,45 @@ object Bounds {
         rect
     }
 
-    val FORCE_OVERLAP_IF_POSSIBLE: Bound = { imageRect, canvasSize ->
-        TODO("force minScale, when imageRect < canvasSize force center.")
+    val FORCE_OVERLAP_OR_CENTER: Bound = { imageRect, canvasSize ->
+        val zoom = max(min(canvasSize.width / imageRect.width, canvasSize.height / imageRect.height), 1f)
+        val center = canvasSize.center
+        var rect = Rect(
+            Offset(
+                center.x - (center.x - imageRect.left) * zoom,
+                center.y - (center.y - imageRect.top) * zoom
+            ),
+            imageRect.size * zoom
+        )
+
+        val isWidthSmaller = rect.width < canvasSize.width
+        val isHeightSmaller = rect.height < canvasSize.height
+
+        if (isWidthSmaller)
+            rect = Rect(
+                Offset(
+                    center.x - rect.width / 2,
+                    rect.top
+                ), rect.size
+            )
+
+        if (isHeightSmaller)
+            rect = Rect(
+                Offset(
+                    rect.left,
+                    center.y - rect.height / 2
+                ), rect.size
+            )
+
+        if (rect.left > 0f && !isWidthSmaller)
+            rect = rect.translate(-rect.left, 0f)
+        if (rect.top > 0f && !isHeightSmaller)
+            rect = rect.translate(0f, -rect.top)
+        if (rect.right < canvasSize.width && !isWidthSmaller)
+            rect = rect.translate(canvasSize.width - rect.right, 0f)
+        if (rect.bottom < canvasSize.height && !isHeightSmaller)
+            rect = rect.translate(0f, canvasSize.height - rect.bottom)
+
+        rect
     }
 }

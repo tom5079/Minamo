@@ -8,7 +8,7 @@ import androidx.compose.ui.geometry.Size
 import kotlinx.coroutines.*
 
 @Composable
-fun rememberSubSampledImageState(scaleType: ScaleType = ScaleTypes.CENTER_INSIDE, bound: Bound = Bounds.FORCE_OVERLAP) = remember {
+fun rememberSubSampledImageState(scaleType: ScaleType = ScaleTypes.CENTER_INSIDE, bound: Bound = Bounds.FORCE_OVERLAP_OR_CENTER) = remember {
     SubSampledImageState(scaleType, bound)
 }
 
