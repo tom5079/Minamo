@@ -57,33 +57,13 @@ private val logger = Logger(
 @Composable
 fun SubSampledImage(
     modifier: Modifier = Modifier,
-    image: ByteArray? = null,
+    imageSource: ImageSource,
     state: SubSampledImageState = rememberSubSampledImageState()
 ) {
     val coroutineScope = rememberCoroutineScope()
 
-    val decoder = remember(image) {
-        image?.let { image ->
-            BitmapRegionDecoder.newInstance(image, 0, image.size, false)
-        }
-    }
-
-    LaunchedEffect(image) {
-        state.imageSize = image?.let { image ->
-            withContext(Dispatchers.Unconfined) {
-                with(BitmapFactory.Options().apply {
-                    inJustDecodeBounds = true
-                }) {
-                    BitmapFactory.decodeByteArray(image, 0, image.size, this)
-
-                    logger.debug {
-                        "Image Size ($outWidth, $outHeight)"
-                    }
-
-                    Size(outWidth.toFloat(), outHeight.toFloat())
-                }
-            }
-        }
+    LaunchedEffect(imageSource) {
+        state.imageSize = imageSource.imageSize
     }
 
     if (state.imageRect == null)
@@ -99,9 +79,7 @@ fun SubSampledImage(
     LaunchedEffect(state.canvasSize, state.imageSize) {
         state.canvasSize?.let { canvasSize ->
         state.imageSize?.let { imageSize ->
-            state.baseTile = decoder?.decodeRegion(Rect(Offset(0f, 0f), imageSize).toAndroidRect(), BitmapFactory.Options().apply {
-                inSampleSize = getMaxSampleSize(canvasSize, imageSize)
-            })?.asImageBitmap()
+            state.baseTile = imageSource.decodeRegion(Rect(Offset(0f, 0f), imageSize), getMaxSampleSize(canvasSize, imageSize))
         } }
     }
 
@@ -164,7 +142,6 @@ fun SubSampledImage(
     LaunchedEffect(state.imageRect) {
         state.imageSize?.let { imageSize ->
         state.canvasSize?.let { canvasSize ->
-        decoder?.let { decoder ->
         state.imageRect?.let { imageRect ->
             val canvasRect = Rect(
                 Offset(0f, 0f),
@@ -189,9 +166,9 @@ fun SubSampledImage(
                     )
                 )
 
-                if (canvasRect.overlaps(tileRect)) tile.load(decoder) else tile.unload()
+                if (canvasRect.overlaps(tileRect)) tile.load(imageSource) else tile.unload()
             }
-        } } } }
+        } } }
     }
 
     var flingJob: Job? = null

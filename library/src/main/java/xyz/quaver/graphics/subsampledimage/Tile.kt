@@ -50,7 +50,7 @@ data class Tile(
     private var loadingJob: Job? = null
     var bitmap by mutableStateOf<ImageBitmap?>(null)
 
-    suspend fun load(decoder: BitmapRegionDecoder) = coroutineScope {
+    suspend fun load(imageSource: ImageSource) = coroutineScope {
         loadingJob?.cancel()
 
         if (bitmap != null) return@coroutineScope
@@ -62,9 +62,7 @@ data class Tile(
                 "Loading Bitmap on ${Thread.currentThread().name}"
             }
 
-            decoder.decodeRegion(rect.toAndroidRect(), BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-            }).asImageBitmap().let {
+            imageSource.decodeRegion(rect, sampleSize).let {
                 if (!isActive) return@let
                 mutex.withLock {
                     if (!isActive) return@withLock

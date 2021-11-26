@@ -16,10 +16,13 @@
 
 package xyz.quaver.graphics.subsampledimage
 
+import android.graphics.BitmapRegionDecoder
+import android.os.Build
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import java.io.InputStream
 import kotlin.math.min
 
 fun calculateSampleSize(scale: Float): Int {
@@ -38,3 +41,21 @@ fun getMaxSampleSize(canvasSize: Size, imageSize: Size): Int {
 
 fun Offset.toIntOffset() = IntOffset(this.x.toInt(), this.y.toInt())
 fun Size.toIntSize() = IntSize(this.width.toInt(), this.height.toInt())
+
+fun newBitmapRegionDecoder(data: ByteArray, offset: Int, length: Int) =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        BitmapRegionDecoder.newInstance(data, offset, length)
+    else
+        BitmapRegionDecoder.newInstance(data, offset, length, false)
+
+fun newBitmapRegionDecoder(pathName: String) =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        BitmapRegionDecoder.newInstance(pathName)
+    else
+        BitmapRegionDecoder.newInstance(pathName, false)
+
+fun newBitmapRegionDecoder(`is`: InputStream) =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+        BitmapRegionDecoder.newInstance(`is`)!!
+    else
+        BitmapRegionDecoder.newInstance(`is`, false)!!
