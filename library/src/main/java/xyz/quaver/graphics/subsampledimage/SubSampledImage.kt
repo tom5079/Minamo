@@ -247,7 +247,7 @@ fun SubSampledImage(
                                             zoomChange != 1f ||
                                             panChange != Offset.Zero
                                     ) {
-                                        if (onGesture(centroid, panChange, zoomChange, rotationChange)) {
+                                        if (onGesture(centroid, panChange, zoomChange, rotationChange).also { logger.debug { "onGesture $it" } } || zoomChange != 1f) {
                                             event.changes.fastForEach {
                                                 it.consumeAllChanges()
                                             }
@@ -259,7 +259,7 @@ fun SubSampledImage(
                                         lastDragTime = time
                                     }
 
-                                    if (event.changes.fastAll { !it.pressed } && event.calculateCentroidSize() > 0f) {
+                                    if (!event.changes.fastAny { it.pressed } && zoomChange == 1f) {
                                         // Prevent lastDragPeriod = 0
                                         lastDragPeriod += 1
 

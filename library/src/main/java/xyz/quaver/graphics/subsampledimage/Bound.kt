@@ -40,7 +40,7 @@ object Bounds {
     val FORCE_OVERLAP: Bound = { imageRect, canvasSize ->
         val zoom = max(max(canvasSize.width / imageRect.width, canvasSize.height / imageRect.height), 1f)
         val center = canvasSize.center
-        var rect = Rect(
+        var rect = if (zoom == 1f) imageRect else Rect(
             Offset(
                 center.x - (center.x - imageRect.left) * zoom,
                 center.y - (center.y - imageRect.top) * zoom
@@ -63,7 +63,7 @@ object Bounds {
     val FORCE_OVERLAP_OR_CENTER: Bound = { imageRect, canvasSize ->
         val zoom = max(min(canvasSize.width / imageRect.width, canvasSize.height / imageRect.height), 1f)
         val center = canvasSize.center
-        var rect = Rect(
+        var rect = if (zoom == 1f) imageRect else Rect(
             Offset(
                 center.x - (center.x - imageRect.left) * zoom,
                 center.y - (center.y - imageRect.top) * zoom
