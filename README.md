@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-  implementation("xyz.quaver:subsampledimage:0.0.1-alpha01-SNAPSHOT")
+  implementation("xyz.quaver:subsampledimage:0.0.1-alpha02-SNAPSHOT")
 }
 ...
 
@@ -69,6 +69,7 @@ Available ScaleTypes:
 |-|-|-|
 |CENTER|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/CENTER.jpg?raw=true)|Centers `imageRect` without resizing|
 |CENTER_INSIDE|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/CENTER_INSIDE_WIDTH.jpg?raw=true) ![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/CENTER_INSIDE_HEIGHT.jpg?raw=true)|Centers `imageRect` inside the `canvasSize` and resizes until one side of the image touches the border of `canvasSize`|
+|FIT_WIDTH|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/FIT_WIDTH.jpg?raw=true)|Fits width of `imageRect` to width of `canvasSize`|
 |FIT_XY|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/FIT_XY.jpg?raw=true)|Fits `imageRect` inside `canvasSize`  (:warning: changes aspect ratio)|
 
 Open Issues/Pull Requests for more ScaleTypes or Implement your own function
