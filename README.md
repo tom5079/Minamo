@@ -16,7 +16,7 @@ Possible replacement for [davemorrissey/subsampling-scale-image-view](https://gi
 
 ## Getting Started
 
-Add mavenCentral snapshot repository
+Add MavenCentral Snapshot repository and add dependency
 ```kotlin
 repositories {
   maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots") }
