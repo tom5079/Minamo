@@ -16,8 +16,6 @@
 
 package xyz.quaver.graphics.subsampledimage
 
-import android.graphics.BitmapFactory
-import android.graphics.BitmapRegionDecoder
 import androidx.compose.animation.core.*
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.Canvas
@@ -28,17 +26,9 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.toAndroidRect
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.*
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.util.fastAll
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 import kotlinx.coroutines.*
@@ -53,7 +43,6 @@ private val logger = Logger(
     frontEnds = listOf(defaultLogFrontend)
 )
 
-@Preview
 @Composable
 fun SubSampledImage(
     modifier: Modifier = Modifier,
