@@ -16,7 +16,19 @@ Possible replacement for [davemorrissey/subsampling-scale-image-view](https://gi
 
 ## Getting Started
 
-:warning: This library is NOT uploaded to Maven Central yet (obviously because it's not complete yet)
+Add mavenCentral snapshot repository
+```kotlin
+repositories {
+  maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots") }
+}
+
+dependencies {
+  implementation("xyz.quaver:subsampledimage:0.0.1-alpha01-SNAPSHOT")
+}
+...
+
+
+```
 
 Using this library is simple as it gets  
 Add following line to your composable  
