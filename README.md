@@ -23,18 +23,40 @@ repositories {
 }
 
 dependencies {
-  implementation("xyz.quaver:subsampledimage:0.0.1-alpha02-SNAPSHOT")
+  implementation("xyz.quaver:subsampledimage:0.0.1-alpha03-SNAPSHOT")
 }
 ...
 
 
 ```
 
-Using this library is simple as it gets  
-Add following line to your composable  
+Add following line to your Composable  
 
 ```kotlin
-SubSampledImage(modifier = Modifier.fillMaxSize() /* or Modifier.size([image size]) */, image = [image ByteArray])
+SubSampledImage(modifier = modifier, imageSource = imageSource)
+```
+
+## ImageSource
+
+Currently supports ByteArray and InputStream
+
+for ByteArray Images:
+```kotlin
+rememberByteArrayImageSource(image)
+```
+
+for InputStream Images:
+```kotlin
+rememberInputStreamImageSource(inputStream)
+```
+It is safe to close the stream after calling this function.
+
+... Or Implement your own ImageSource
+```kotlin
+interface ImageSource {
+    val imageSize: Size
+    fun decodeRegion(region: Rect, sampleSize: Int): ImageBitmap
+}
 ```
 
 ## Manipulating States
