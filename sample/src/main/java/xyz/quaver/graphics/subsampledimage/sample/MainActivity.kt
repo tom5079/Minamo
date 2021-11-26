@@ -70,10 +70,10 @@ class MainActivity : ComponentActivity() {
                                 } }
                             }
 
-                            SubSampledImage(modifier = Modifier
-                                .height(height?.let { with(LocalDensity.current) { it.toDp() } }
-                                    ?: 128.dp)
-                                .fillMaxWidth(), imageSource = imageSource, state = state)
+                            SubSampledImage(
+                                modifier = Modifier.height(height?.let { with(LocalDensity.current) { it.toDp() } } ?: 128.dp).fillMaxWidth(),
+                                imageSource = imageSource,
+                                state = state)
                         }
                     }
                 }
