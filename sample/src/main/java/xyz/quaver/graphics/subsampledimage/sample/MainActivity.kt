@@ -36,9 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
-import xyz.quaver.graphics.subsampledimage.ScaleTypes
-import xyz.quaver.graphics.subsampledimage.SubSampledImage
-import xyz.quaver.graphics.subsampledimage.rememberSubSampledImageState
+import xyz.quaver.graphics.subsampledimage.*
 import xyz.quaver.graphics.subsampledimage.sample.ui.theme.SubSamplingImageViewTheme
 
 class MainActivity : ComponentActivity() {
@@ -51,36 +49,31 @@ class MainActivity : ComponentActivity() {
             SubSamplingImageViewTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(color = MaterialTheme.colors.background) {
-                    resources.assets.open("card.png").use {
-                        it.readBytes()
-                    }.let {
-                        logger.debug {
-                            "Image ByteArray ${it.size} bytes"
-                        }
+                    val imageSource = resources.assets.open("card.png").use { rememberInputStreamImageSource(it) }
 
-                        val states = listOf(
-                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
-                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
-                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
-                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
-                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
-                        )
+                    val states = listOf(
+                        rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                        rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                        rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                        rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                        rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                    )
 
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(states) { state ->
-                                val height by produceState<Float?>(null, state.canvasSize, state.imageSize) {
-                                    if (value != null) return@produceState
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(states) { state ->
+                            val height by produceState<Float?>(null, state.canvasSize, state.imageSize) {
+                                if (value != null) return@produceState
 
-                                    state.canvasSize?.let { canvasSize ->
-                                    state.imageSize?.let { imageSize ->
-                                        value = imageSize.height * canvasSize.width / imageSize.width
-                                    } }
-                                }
-
-                                SubSampledImage(modifier = Modifier
-                                    .height(height?.let { with (LocalDensity.current) { it.toDp() } } ?: 128.dp)
-                                    .fillMaxWidth(), image = it, state = state)
+                                state.canvasSize?.let { canvasSize ->
+                                state.imageSize?.let { imageSize ->
+                                    value = imageSize.height * canvasSize.width / imageSize.width
+                                } }
                             }
+
+                            SubSampledImage(
+                                modifier = Modifier.height(height?.let { with(LocalDensity.current) { it.toDp() } } ?: 128.dp).fillMaxWidth(),
+                                imageSource = imageSource,
+                                state = state)
                         }
                     }
                 }
