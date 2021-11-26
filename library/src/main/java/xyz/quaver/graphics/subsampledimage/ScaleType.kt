@@ -56,6 +56,13 @@ object ScaleTypes {
         )
     }
 
+    val FIT_WIDTH: ScaleType = { (canvasWidth, _), (imageWidth, imageHeight) ->
+        Rect(
+            Offset.Zero,
+            Size(canvasWidth, imageHeight * canvasWidth / imageWidth)
+        )
+    }
+
     val FIT_XY: ScaleType = { canvasSize, _ ->
         Rect(Offset.Zero, canvasSize)
     }

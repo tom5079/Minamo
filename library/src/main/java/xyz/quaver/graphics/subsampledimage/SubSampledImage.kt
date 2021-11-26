@@ -24,6 +24,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -32,10 +33,14 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toAndroidRect
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.util.fastAll
+import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastForEach
 import kotlinx.coroutines.*
 import org.kodein.log.Logger
 import org.kodein.log.frontend.defaultLogFrontend
@@ -47,7 +52,6 @@ private val logger = Logger(
     tag = Logger.Tag("xyz.quaver.graphics.subsampledimage.SubsampledImage", "SubsampledImage"),
     frontEnds = listOf(defaultLogFrontend)
 )
-
 
 @Preview
 @Composable
@@ -193,7 +197,7 @@ fun SubSampledImage(
     var flingJob: Job? = null
     val flingSpec = rememberSplineBasedDecay<Float>()
 
-    val onGesture: (Offset, Offset, Float, Float) -> Unit = { centroid, pan, zoom, _ ->
+    val onGesture: (Offset, Offset, Float, Float) -> Boolean = { centroid, pan, zoom, _ ->
         state.imageRect?.let {
             logger.debug {
                 """
@@ -203,17 +207,22 @@ fun SubSampledImage(
                         zoom $zoom
                     """.trimIndent()
             }
-            state.setImageRectWithBound(Rect(
+            val rect = Rect(
                 it.left + pan.x + (it.left - centroid.x) * (zoom - 1),
                 it.top + pan.y + (it.top - centroid.y) * (zoom - 1),
                 it.right + pan.x + (it.right - centroid.x) * (zoom - 1),
                 it.bottom + pan.y + (it.bottom - centroid.y) * (zoom - 1)
-            ))
-        }
+            )
+
+            state.setImageRectWithBound(rect)
+
+            state.imageRect == rect
+        } ?: false
     }
 
     Canvas(
         modifier
+            .clipToBounds()
             .pointerInput(Unit) {
                 forEachGesture {
                     awaitPointerEventScope {
@@ -231,7 +240,7 @@ fun SubSampledImage(
                         flingJob?.cancel()
                         do {
                             val event = awaitPointerEvent()
-                            val canceled = event.changes.any { it.positionChangeConsumed() }
+                            val canceled = event.changes.fastAny { it.positionChangeConsumed() }
                             if (!canceled) {
                                 val zoomChange = event.calculateZoom()
                                 val rotationChange = event.calculateRotation()
@@ -261,20 +270,19 @@ fun SubSampledImage(
                                             zoomChange != 1f ||
                                             panChange != Offset.Zero
                                     ) {
-                                        onGesture(centroid, panChange, zoomChange, rotationChange)
+                                        if (onGesture(centroid, panChange, zoomChange, rotationChange)) {
+                                            event.changes.fastForEach {
+                                                it.consumeAllChanges()
+                                            }
+                                        }
 
                                         lastDrag = panChange
                                         val time = System.currentTimeMillis()
                                         lastDragPeriod = time - lastDragTime
                                         lastDragTime = time
                                     }
-                                    event.changes.forEach {
-                                        if (it.positionChanged()) {
-                                            it.consumeAllChanges()
-                                        }
-                                    }
 
-                                    if (event.changes.all { !it.pressed } && event.calculateCentroidSize() > 0f) {
+                                    if (event.changes.fastAll { !it.pressed } && event.calculateCentroidSize() > 0f) {
                                         // Prevent lastDragPeriod = 0
                                         lastDragPeriod += 1
 
@@ -304,7 +312,7 @@ fun SubSampledImage(
                                     }
                                 }
                             }
-                        } while (!canceled && event.changes.any { it.pressed })
+                        } while (!canceled && event.changes.fastAny { it.pressed })
                     }
                 }
             }.pointerInput(Unit) {
@@ -319,7 +327,7 @@ fun SubSampledImage(
             state.canvasSize = size.copy()
 
         logger.debug {
-            "Canvas Size $state.canvasSize"
+            "Canvas Size ${state.canvasSize}"
         }
 
         state.imageSize?.let { imageSize ->

@@ -18,10 +18,12 @@ plugins {
     id("com.android.library")
     id("kotlin-android")
     id("org.jetbrains.dokka")
+    `maven-publish`
+    signing
 }
 
 group = "xyz.quaver"
-version = "0.0.1-alpha01"
+version = "0.0.1-alpha01-SNAPSHOT"
 
 android {
     compileSdk = 31
@@ -69,6 +71,7 @@ dependencies {
     implementation("androidx.compose.material:material:1.0.5")
     implementation("androidx.compose.material:material-icons-core:1.0.5")
     implementation("androidx.compose.material:material-icons-extended:1.0.5")
+    implementation("androidx.compose.ui:ui-util:1.0.5")
 
     implementation("org.kodein.log:kodein-log-jvm:0.11.1")
 
@@ -80,4 +83,70 @@ dependencies {
     dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:1.5.30")
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.1.5")
+}
+
+val ossrhUsername: String? by project
+val ossrhPassword: String? by project
+
+val sourceJar by tasks.registering(Jar::class) {
+    archiveClassifier.set("sources")
+    from(android.sourceSets["main"].java.srcDirs)
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                groupId = group.toString()
+                artifactId = "subsampledimage"
+                version = project.version as String
+
+                from(components["release"])
+                artifact(sourceJar)
+
+                pom {
+                    name.set("subsampledimage")
+                    description.set("Image Composable that supports large images")
+                    url.set("https://github.com/tom5079/SubSampledImage")
+
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+                    developers {
+                        developer {
+                            id.set("tom5079")
+                            name.set("Minseok Son")
+                            email.set("tom5079@naver.com")
+                        }
+                    }
+                    scm {
+                        connection.set("scm:git:git://github.com/tom5079/SubSampledImage.git")
+                        developerConnection.set("scm:git:ssh://github.com:tom5079/SubSampledImage.git")
+                        url.set("https://github.com/tom5079/SubSampledImage")
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                val releasesRepoUrl = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2/")
+                val snapshotRepoUrl = uri("https://oss.sonatype.org/content/repositories/snapshots/")
+
+                url = if (version.toString().endsWith("SNAPSHOT")) snapshotRepoUrl else releasesRepoUrl
+
+                credentials {
+                    username = ossrhUsername
+                    password = ossrhPassword
+                }
+            }
+        }
+    }
+
+    signing {
+        sign(publishing.publications)
+    }
 }

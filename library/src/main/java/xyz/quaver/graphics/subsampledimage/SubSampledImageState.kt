@@ -23,6 +23,8 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.*
+import org.kodein.log.LoggerFactory
+import org.kodein.log.newLogger
 
 @Composable
 fun rememberSubSampledImageState(scaleType: ScaleType = ScaleTypes.CENTER_INSIDE, bound: Bound = Bounds.FORCE_OVERLAP_OR_CENTER) = remember {
@@ -30,6 +32,9 @@ fun rememberSubSampledImageState(scaleType: ScaleType = ScaleTypes.CENTER_INSIDE
 }
 
 class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
+
+    private val logger = newLogger(LoggerFactory.default)
+
     var canvasSize by mutableStateOf<Size?>(null)
         internal set
 
@@ -101,5 +106,9 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
         canvasSize?.let { canvasSize ->
             setImageRectWithBound(scaleType.invoke(canvasSize, imageSize))
         } }
+
+        logger.debug {
+            "Reset imageRect to $imageRect"
+        }
     }
 }

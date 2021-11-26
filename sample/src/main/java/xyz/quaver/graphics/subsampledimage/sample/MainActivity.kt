@@ -19,16 +19,26 @@ package xyz.quaver.graphics.subsampledimage.sample
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
+import xyz.quaver.graphics.subsampledimage.ScaleTypes
 import xyz.quaver.graphics.subsampledimage.SubSampledImage
+import xyz.quaver.graphics.subsampledimage.rememberSubSampledImageState
 import xyz.quaver.graphics.subsampledimage.sample.ui.theme.SubSamplingImageViewTheme
 
 class MainActivity : ComponentActivity() {
@@ -47,7 +57,31 @@ class MainActivity : ComponentActivity() {
                         logger.debug {
                             "Image ByteArray ${it.size} bytes"
                         }
-                        SubSampledImage(modifier = Modifier.fillMaxSize(), image = it)
+
+                        val states = listOf(
+                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                            rememberSubSampledImageState(ScaleTypes.FIT_WIDTH),
+                        )
+
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(states) { state ->
+                                val height by produceState<Float?>(null, state.canvasSize, state.imageSize) {
+                                    if (value != null) return@produceState
+
+                                    state.canvasSize?.let { canvasSize ->
+                                    state.imageSize?.let { imageSize ->
+                                        value = imageSize.height * canvasSize.width / imageSize.width
+                                    } }
+                                }
+
+                                SubSampledImage(modifier = Modifier
+                                    .height(height?.let { with (LocalDensity.current) { it.toDp() } } ?: 128.dp)
+                                    .fillMaxWidth(), image = it, state = state)
+                            }
+                        }
                     }
                 }
             }
