@@ -35,9 +35,9 @@ interface ImageSource {
 @Composable
 fun rememberByteArrayImageSource(image: ByteArray) = remember {
     object: ImageSource {
-        private val decoder = newBitmapRegionDecoder(image, 0, image.size)
+        private val decoder by lazy { newBitmapRegionDecoder(image, 0, image.size) }
 
-        override val imageSize = Size(decoder.width.toFloat(), decoder.height.toFloat())
+        override val imageSize by lazy { Size(decoder.width.toFloat(), decoder.height.toFloat()) }
 
         override fun decodeRegion(region: Rect, sampleSize: Int) =
             decoder.decodeRegion(region.toAndroidRect(), BitmapFactory.Options().apply {
@@ -50,9 +50,9 @@ fun rememberByteArrayImageSource(image: ByteArray) = remember {
 @Composable
 fun rememberInputStreamImageSource(inputStream: InputStream) = remember {
     object: ImageSource {
-        private val decoder = newBitmapRegionDecoder(inputStream)
+        private val decoder by lazy { newBitmapRegionDecoder(inputStream) }
 
-        override val imageSize = Size(decoder.width.toFloat(), decoder.height.toFloat())
+        override val imageSize by lazy { Size(decoder.width.toFloat(), decoder.height.toFloat()) }
 
         override fun decodeRegion(region: Rect, sampleSize: Int) =
             decoder.decodeRegion(region.toAndroidRect(), BitmapFactory.Options().apply {
