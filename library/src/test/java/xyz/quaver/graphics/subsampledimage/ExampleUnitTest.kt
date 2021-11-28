@@ -16,6 +16,7 @@
 
 package xyz.quaver.graphics.subsampledimage
 
+import androidx.compose.ui.geometry.Size
 import org.junit.Test
 
 import org.junit.Assert.*
@@ -29,5 +30,10 @@ class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
         assertEquals(4, 2 + 2)
+    }
+
+    @Test
+    fun test() {
+        println(getMaxSampleSize(Size(1080f, 300f), Size(1359f, 1920f)))
     }
 }

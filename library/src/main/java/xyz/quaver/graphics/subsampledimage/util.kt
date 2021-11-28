@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import java.io.InputStream
+import kotlin.math.max
 import kotlin.math.min
 
 fun calculateSampleSize(scale: Float): Int {
@@ -34,9 +35,9 @@ fun calculateSampleSize(scale: Float): Int {
 }
 
 fun getMaxSampleSize(canvasSize: Size, imageSize: Size): Int {
-    val minScale =
-        min(canvasSize.width / imageSize.width, canvasSize.height / imageSize.height)
-    return calculateSampleSize(minScale)
+    val maxScale =
+        max(canvasSize.width / imageSize.width, canvasSize.height / imageSize.height)
+    return calculateSampleSize(maxScale)
 }
 
 fun Offset.toIntOffset() = IntOffset(this.x.toInt(), this.y.toInt())
