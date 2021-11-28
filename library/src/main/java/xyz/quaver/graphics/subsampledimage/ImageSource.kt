@@ -25,6 +25,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toAndroidRect
+import java.io.File
 import java.io.InputStream
 
 interface ImageSource {
@@ -50,7 +51,7 @@ fun rememberByteArrayImageSource(image: ByteArray) = remember {
 @Composable
 fun rememberInputStreamImageSource(inputStream: InputStream) = remember {
     object: ImageSource {
-        private val decoder by lazy { newBitmapRegionDecoder(inputStream) }
+        private val decoder = newBitmapRegionDecoder(inputStream)
 
         override val imageSize by lazy { Size(decoder.width.toFloat(), decoder.height.toFloat()) }
 
