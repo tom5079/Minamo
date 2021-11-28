@@ -46,13 +46,13 @@ private val logger = Logger(
 @Composable
 fun SubSampledImage(
     modifier: Modifier = Modifier,
-    imageSource: ImageSource,
+    imageSource: ImageSource? = null,
     state: SubSampledImageState = rememberSubSampledImageState()
 ) {
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(imageSource) {
-        state.imageSize = imageSource.imageSize
+        state.imageSize = imageSource?.imageSize
     }
 
     if (state.imageRect == null)
@@ -68,7 +68,7 @@ fun SubSampledImage(
     LaunchedEffect(state.canvasSize, state.imageSize) {
         state.canvasSize?.let { canvasSize ->
         state.imageSize?.let { imageSize ->
-            state.baseTile = imageSource.decodeRegion(Rect(Offset(0f, 0f), imageSize), getMaxSampleSize(canvasSize, imageSize))
+            state.baseTile = imageSource?.decodeRegion(Rect(Offset(0f, 0f), imageSize), getMaxSampleSize(canvasSize, imageSize))
         } }
     }
 
@@ -129,6 +129,7 @@ fun SubSampledImage(
     }
 
     LaunchedEffect(state.imageRect) {
+        imageSource?.let { imageSource ->
         state.imageSize?.let { imageSize ->
         state.canvasSize?.let { canvasSize ->
         state.imageRect?.let { imageRect ->
@@ -157,7 +158,7 @@ fun SubSampledImage(
 
                 if (canvasRect.overlaps(tileRect)) tile.load(imageSource) else tile.unload()
             }
-        } } }
+        } } } }
     }
 
     var flingJob: Job? = null
