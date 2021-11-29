@@ -40,7 +40,7 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
     /**
      * Image decoded as a lowest possible size that fits canvasSize to serve as a base layer
      */
-    var baseTile: ImageBitmap? = null
+    var baseTile by mutableStateOf<ImageBitmap?>(null)
         internal set
 
     var tiles by mutableStateOf<List<Tile>?>(null)

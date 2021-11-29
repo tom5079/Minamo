@@ -23,7 +23,7 @@ plugins {
 }
 
 group = "xyz.quaver"
-version = "0.0.1-alpha08-SNAPSHOT-DEV07"
+version = "0.0.1-alpha09-SNAPSHOT"
 
 android {
     compileSdk = 31

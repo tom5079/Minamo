@@ -45,19 +45,28 @@ fun SubSampledImage(
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(imageSource) {
-        state.imageSize = imageSource?.imageSize
+        launch (Dispatchers.Default) {
+            state.imageSize = imageSource?.imageSize
+        }
     }
 
     if (state.imageRect == null)
         LaunchedEffect(state.canvasSize, state.imageSize) {
-            state.resetImageRect()
+            launch (Dispatchers.Default) {
+                state.resetImageRect()
+            }
         }
 
     // Bitmap of whole image with lower resolution that acts like a base layer
     LaunchedEffect(state.canvasSize, state.imageSize) {
         state.canvasSize?.let { canvasSize ->
         state.imageSize?.let { imageSize ->
-            state.baseTile = imageSource?.decodeRegion(Rect(Offset(0f, 0f), imageSize), getMaxSampleSize(canvasSize, imageSize))
+            launch (Dispatchers.Default) {
+                state.baseTile = imageSource?.decodeRegion(
+                    Rect(Offset(0f, 0f), imageSize),
+                    getMaxSampleSize(canvasSize, imageSize)
+                )
+            }
         } }
     }
 
@@ -72,35 +81,37 @@ fun SubSampledImage(
 
             if (state.tiles?.firstOrNull()?.sampleSize == sampleSize) return@LaunchedEffect
 
-            val maxSampleSize = getMaxSampleSize(canvasSize, imageSize)
+            launch (Dispatchers.Default) {
+                val maxSampleSize = getMaxSampleSize(canvasSize, imageSize)
 
-            state.tiles = mutableListOf<Tile>().apply {
-                val tileWidth = imageSize.width * sampleSize / maxSampleSize
-                val tileHeight = imageSize.height * sampleSize / maxSampleSize
+                state.tiles = mutableListOf<Tile>().apply {
+                    val tileWidth = imageSize.width * sampleSize / maxSampleSize
+                    val tileHeight = imageSize.height * sampleSize / maxSampleSize
 
-                var y = 0f
+                    var y = 0f
 
-                while (y < imageSize.height) {
-                    var x = 0f
-                    while (x < imageSize.width) {
-                        add(
-                            Tile(
-                                Rect(
-                                    Offset(x, y),
-                                    Size(
-                                        if (x + tileWidth > imageSize.width) imageSize.width - x else tileWidth,
-                                        if (y + tileHeight > imageSize.height) imageSize.height - y else tileHeight
-                                    )
-                                ),
-                                sampleSize
+                    while (y < imageSize.height) {
+                        var x = 0f
+                        while (x < imageSize.width) {
+                            add(
+                                Tile(
+                                    Rect(
+                                        Offset(x, y),
+                                        Size(
+                                            if (x + tileWidth > imageSize.width) imageSize.width - x else tileWidth,
+                                            if (y + tileHeight > imageSize.height) imageSize.height - y else tileHeight
+                                        )
+                                    ),
+                                    sampleSize
+                                )
                             )
-                        )
-                        x += tileWidth
+                            x += tileWidth
+                        }
+                        y += tileHeight
                     }
-                    y += tileHeight
-                }
 
-            }.toList()
+                }.toList()
+            }
         } } }
     }
 
@@ -109,30 +120,32 @@ fun SubSampledImage(
         state.imageSize?.let { imageSize ->
         state.canvasSize?.let { canvasSize ->
         state.imageRect?.let { imageRect ->
-            val canvasRect = Rect(
-                Offset(0f, 0f),
-                canvasSize
-            )
-
-            state.tiles?.forEach { tile ->
-                // use baseTile if available
-                if (tile.sampleSize == getMaxSampleSize(canvasSize, imageSize)) return@forEach
-
-                val widthRatio = imageRect.width / imageSize.width
-                val heightRatio = imageRect.height / imageSize.height
-
-                val tileRect = Rect(
-                    Offset(
-                        imageRect.left + tile.rect.left * widthRatio,
-                        imageRect.top + tile.rect.top * heightRatio
-                    ),
-                    Size(
-                        tile.rect.width * widthRatio,
-                        tile.rect.height * heightRatio
-                    )
+            launch (Dispatchers.Default) {
+                val canvasRect = Rect(
+                    Offset(0f, 0f),
+                    canvasSize
                 )
 
-                if (canvasRect.overlaps(tileRect)) tile.load(imageSource) else tile.unload()
+                state.tiles?.forEach { tile ->
+                    // use baseTile if available
+                    if (tile.sampleSize == getMaxSampleSize(canvasSize, imageSize)) return@forEach
+
+                    val widthRatio = imageRect.width / imageSize.width
+                    val heightRatio = imageRect.height / imageSize.height
+
+                    val tileRect = Rect(
+                        Offset(
+                            imageRect.left + tile.rect.left * widthRatio,
+                            imageRect.top + tile.rect.top * heightRatio
+                        ),
+                        Size(
+                            tile.rect.width * widthRatio,
+                            tile.rect.height * heightRatio
+                        )
+                    )
+
+                    if (canvasRect.overlaps(tileRect)) tile.load(imageSource) else tile.unload()
+                }
             }
         } } } }
     }
