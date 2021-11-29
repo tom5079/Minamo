@@ -10,7 +10,7 @@ Possible replacement for [davemorrissey/subsampling-scale-image-view](https://gi
 - Dynamic partial image loading/unloading based on the tile visibility (Supports wide/large image)
 - Zooming and panning out of the box
 - Supports all image types supported by [BigmapRegionDecoder](https://developer.android.com/reference/android/graphics/BitmapRegionDecoder)
-- Currently only works with Images in ByteArray (WIP)
+- Currently supports ByteArray and InputStream & custom imagesources
 
 # Documentation
 
@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-  implementation("xyz.quaver:subsampledimage:0.0.1-alpha04-SNAPSHOT")
+  implementation("xyz.quaver:subsampledimage:0.0.1-alpha08-SNAPSHOT")
 }
 ...
 
