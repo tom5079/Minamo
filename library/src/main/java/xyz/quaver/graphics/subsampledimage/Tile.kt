@@ -16,15 +16,11 @@
 
 package xyz.quaver.graphics.subsampledimage
 
-import android.graphics.BitmapFactory
-import android.graphics.BitmapRegionDecoder
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.toAndroidRect
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -56,19 +52,12 @@ data class Tile(
         if (bitmap != null) return@coroutineScope
 
         loadingJob = tileLoadCoroutineScope.launch {
-            val time = System.currentTimeMillis()
-
-            logger.debug {
-                "Loading Bitmap on ${Thread.currentThread().name}"
-            }
-
             imageSource.decodeRegion(rect, sampleSize).let {
                 if (!isActive) return@let
                 mutex.withLock {
                     if (!isActive) return@withLock
                     bitmap = it
                 }
-                logger.debug { "Finished loading bitmap in ${System.currentTimeMillis() - time} ms" }
             }
         }
     }

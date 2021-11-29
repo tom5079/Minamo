@@ -32,16 +32,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 import kotlinx.coroutines.*
-import org.kodein.log.Logger
-import org.kodein.log.frontend.defaultLogFrontend
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.min
-
-private val logger = Logger(
-    tag = Logger.Tag("xyz.quaver.graphics.subsampledimage.SubsampledImage", "SubsampledImage"),
-    frontEnds = listOf(defaultLogFrontend)
-)
 
 @Composable
 fun SubSampledImage(
@@ -57,10 +50,6 @@ fun SubSampledImage(
 
     if (state.imageRect == null)
         LaunchedEffect(state.canvasSize, state.imageSize) {
-            logger.debug {
-                "initializing imageRect"
-            }
-
             state.resetImageRect()
         }
 
@@ -73,9 +62,6 @@ fun SubSampledImage(
     }
 
     LaunchedEffect(state.imageSize, state.imageRect?.size) {
-        logger.info {
-            "imageRect size: ${state.imageRect?.size}"
-        }
         state.canvasSize?.let { canvasSize ->
         state.imageRect?.let { imageRect ->
         state.imageSize?.let { imageSize ->
@@ -87,16 +73,6 @@ fun SubSampledImage(
             if (state.tiles?.firstOrNull()?.sampleSize == sampleSize) return@LaunchedEffect
 
             val maxSampleSize = getMaxSampleSize(canvasSize, imageSize)
-
-            logger.debug {
-                """
-                tiles
-                TargetRect $imageRect
-                TargetScale $targetScale
-                SampleSize $sampleSize
-                MaxSampleSize $maxSampleSize
-                """.trim()
-            }
 
             state.tiles = mutableListOf<Tile>().apply {
                 val tileWidth = imageSize.width * sampleSize / maxSampleSize
@@ -166,14 +142,6 @@ fun SubSampledImage(
 
     val onGesture: (Offset, Offset, Float, Float) -> Boolean = { centroid, pan, zoom, _ ->
         state.imageRect?.let {
-            logger.debug {
-                """
-                        transformGestures
-                        centroid $centroid
-                        pan $pan
-                        zoom $zoom
-                    """.trimIndent()
-            }
             val rect = Rect(
                 it.left + pan.x + (it.left - centroid.x) * (zoom - 1),
                 it.top + pan.y + (it.top - centroid.y) * (zoom - 1),
@@ -237,7 +205,7 @@ fun SubSampledImage(
                                             zoomChange != 1f ||
                                             panChange != Offset.Zero
                                     ) {
-                                        if (onGesture(centroid, panChange, zoomChange, rotationChange).also { logger.debug { "onGesture $it" } } || zoomChange != 1f) {
+                                        if (onGesture(centroid, panChange, zoomChange, rotationChange) || zoomChange != 1f) {
                                             event.changes.fastForEach {
                                                 it.consumeAllChanges()
                                             }
@@ -253,9 +221,6 @@ fun SubSampledImage(
                                         // Prevent lastDragPeriod = 0
                                         lastDragPeriod += 1
 
-                                        logger.debug {
-                                            "dragend with D: ${lastDrag.getDistance()} P: $lastDragPeriod ms}"
-                                        }
                                         flingJob = coroutineScope.launch {
                                             var lastValue = 0f
                                             val flingDistance = lastDrag.getDistance()
@@ -267,9 +232,6 @@ fun SubSampledImage(
                                                 if (!isActive) return@animateDecay
 
                                                 val delta = value - lastValue
-                                                logger.debug {
-                                                    "fling $delta"
-                                                }
                                                 state.imageRect?.let {
                                                     state.setImageRectWithBound(it.translate(flingVector * delta))
                                                 }
@@ -292,10 +254,6 @@ fun SubSampledImage(
     ) {
         if (size.width != 0F && size.height != 0F)
             state.canvasSize = size.copy()
-
-        logger.debug {
-            "Canvas Size ${state.canvasSize}"
-        }
 
         state.imageSize?.let { imageSize ->
         state.imageRect?.let { imageRect ->
@@ -329,10 +287,6 @@ fun SubSampledImage(
                         tile.rect.right / imageSize.width * baseTile.width,
                         tile.rect.bottom / imageSize.height * baseTile.height,
                     )
-
-                    logger.debug {
-                        "baseTileRect $baseTileRect"
-                    }
 
                     drawImage(
                         baseTile,

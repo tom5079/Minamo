@@ -20,8 +20,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.center
-import org.kodein.log.LoggerFactory
-import org.kodein.log.newLogger
 import kotlin.math.max
 import kotlin.math.min
 
@@ -32,8 +30,6 @@ typealias Bound = (imageRect: Rect, canvasSize: Size) -> Rect
  * 1. Don't change the aspect ratio of imageRect
  */
 object Bounds {
-
-    private val logger = newLogger(LoggerFactory.default)
 
     val NO_BOUND: Bound = { imageRect, _ -> imageRect }
 

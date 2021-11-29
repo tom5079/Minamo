@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import java.io.InputStream
 import kotlin.math.max
-import kotlin.math.min
 
 fun calculateSampleSize(scale: Float): Int {
     var sampleSize = 1

@@ -17,7 +17,6 @@
 package xyz.quaver.graphics.subsampledimage
 
 import android.graphics.BitmapFactory
-import android.graphics.BitmapRegionDecoder
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Rect
@@ -25,7 +24,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toAndroidRect
-import java.io.File
 import java.io.InputStream
 
 interface ImageSource {
