@@ -18,11 +18,22 @@ package xyz.quaver.graphics.subsampledimage
 
 import android.graphics.BitmapRegionDecoder
 import android.os.Build
+import androidx.compose.animation.core.AnimationState
+import androidx.compose.animation.core.animateDecay
+import androidx.compose.foundation.gestures.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.input.pointer.consumeAllChanges
+import androidx.compose.ui.input.pointer.positionChangeConsumed
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.util.fastForEach
+import kotlinx.coroutines.*
 import java.io.InputStream
+import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.max
 
 fun calculateSampleSize(scale: Float): Int {
@@ -59,3 +70,74 @@ fun newBitmapRegionDecoder(`is`: InputStream) =
         BitmapRegionDecoder.newInstance(`is`)!!
     else
         BitmapRegionDecoder.newInstance(`is`, false)!!
+
+private var flingJob: Job? = null
+suspend fun PointerInputScope.detectGesturesAndFling(coroutineScope: CoroutineScope, onGesture: (Offset, Offset, Float, Float) -> Boolean, onFling: suspend CoroutineScope.(Offset, Long) -> Unit) {
+    forEachGesture {
+        awaitPointerEventScope {
+            var rotation = 0f
+            var zoom = 1f
+            var pan = Offset.Zero
+            var pastTouchSlop = false
+            val touchSlop = viewConfiguration.touchSlop
+
+            var lastDrag = Offset.Zero
+            var lastDragTime = System.currentTimeMillis()
+            var lastDragPeriod = 1L
+
+            awaitFirstDown(requireUnconsumed = false)
+            flingJob?.cancel()
+            do {
+                val event = awaitPointerEvent()
+                val canceled = event.changes.fastAny { it.positionChangeConsumed() }
+                if (!canceled) {
+                    val zoomChange = event.calculateZoom()
+                    val rotationChange = event.calculateRotation()
+                    val panChange = event.calculatePan()
+
+                    if (!pastTouchSlop) {
+                        zoom *= zoomChange
+                        rotation += rotationChange
+                        pan += panChange
+
+                        val centroidSize = event.calculateCentroidSize(useCurrent = false)
+                        val zoomMotion = abs(1 - zoom) * centroidSize
+                        val rotationMotion = abs(rotation * PI.toFloat() * centroidSize / 180f)
+                        val panMotion = pan.getDistance()
+
+                        if (zoomMotion > touchSlop ||
+                            rotationMotion > touchSlop ||
+                            panMotion > touchSlop
+                        ) {
+                            pastTouchSlop = true
+                        }
+                    }
+
+                    if (pastTouchSlop) {
+                        val centroid = event.calculateCentroid(useCurrent = false)
+                        if (rotationChange != 0f ||
+                            zoomChange != 1f ||
+                            panChange != Offset.Zero
+                        ) {
+
+                            if (onGesture(centroid, panChange, zoomChange, rotationChange) || zoomChange != 1f) {
+                                event.changes.fastForEach {
+                                    it.consumeAllChanges()
+                                }
+                            }
+
+                            lastDrag = panChange
+                            val time = System.currentTimeMillis()
+                            lastDragPeriod = time - lastDragTime
+                            lastDragTime = time
+                        }
+
+                        if (!event.changes.fastAny { it.pressed } && zoomChange == 1f) {
+                            flingJob = coroutineScope.launch { onFling.invoke(coroutineScope, lastDrag, lastDragPeriod) }
+                        }
+                    }
+                }
+            } while (!canceled && event.changes.fastAny { it.pressed })
+        }
+    }
+}
