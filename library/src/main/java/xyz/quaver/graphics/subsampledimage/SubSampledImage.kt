@@ -29,11 +29,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.util.fastAny
-import androidx.compose.ui.util.fastForEach
 import kotlinx.coroutines.*
-import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.min
 
 @Composable
@@ -150,7 +146,6 @@ fun SubSampledImage(
         } } } }
     }
 
-    var flingJob: Job? = null
     val flingSpec = rememberSplineBasedDecay<Float>()
 
     val onGesture: (Offset, Offset, Float, Float) -> Boolean = { centroid, pan, zoom, _ ->
@@ -168,101 +163,41 @@ fun SubSampledImage(
         } ?: false
     }
 
+    val onFling: suspend CoroutineScope.(Offset, Long) -> Unit = { lastDrag, lastDragPeriod ->
+        var lastValue = 0f
+        val flingDistance = lastDrag.getDistance()
+        val flingVector = lastDrag / flingDistance
+        AnimationState(
+            initialValue = 0f,
+            initialVelocity = flingDistance / (lastDragPeriod+1) * 1000 // Prevent lastDragPeriod = 0
+        ).animateDecay(flingSpec) {
+            if (!isActive) cancelAnimation()
+
+            val delta = value - lastValue
+            state.imageRect?.let {
+                state.setImageRectWithBound(it.translate(flingVector * delta))
+            }
+            lastValue = value
+        }
+    }
+
     Canvas(
         modifier
             .clipToBounds()
-            .pointerInput(Unit) {
-                forEachGesture {
-                    awaitPointerEventScope {
-                        var rotation = 0f
-                        var zoom = 1f
-                        var pan = Offset.Zero
-                        var pastTouchSlop = false
-                        val touchSlop = viewConfiguration.touchSlop
+            .run {
+                if (state.isGestureEnabled)
+                    pointerInput(Unit) {
+                        detectGesturesAndFling(coroutineScope, onGesture, onFling)
+                    }.pointerInput(Unit) {
 
-                        var lastDrag = Offset.Zero
-                        var lastDragTime = System.currentTimeMillis()
-                        var lastDragPeriod = 1L
-
-                        awaitFirstDown(requireUnconsumed = false)
-                        flingJob?.cancel()
-                        do {
-                            val event = awaitPointerEvent()
-                            val canceled = event.changes.fastAny { it.positionChangeConsumed() }
-                            if (!canceled) {
-                                val zoomChange = event.calculateZoom()
-                                val rotationChange = event.calculateRotation()
-                                val panChange = event.calculatePan()
-
-                                if (!pastTouchSlop) {
-                                    zoom *= zoomChange
-                                    rotation += rotationChange
-                                    pan += panChange
-
-                                    val centroidSize = event.calculateCentroidSize(useCurrent = false)
-                                    val zoomMotion = abs(1 - zoom) * centroidSize
-                                    val rotationMotion = abs(rotation * PI.toFloat() * centroidSize / 180f)
-                                    val panMotion = pan.getDistance()
-
-                                    if (zoomMotion > touchSlop ||
-                                            rotationMotion > touchSlop ||
-                                            panMotion > touchSlop
-                                    ) {
-                                        pastTouchSlop = true
-                                    }
-                                }
-
-                                if (pastTouchSlop) {
-                                    val centroid = event.calculateCentroid(useCurrent = false)
-                                    if (rotationChange != 0f ||
-                                            zoomChange != 1f ||
-                                            panChange != Offset.Zero
-                                    ) {
-                                        if (onGesture(centroid, panChange, zoomChange, rotationChange) || zoomChange != 1f) {
-                                            event.changes.fastForEach {
-                                                it.consumeAllChanges()
-                                            }
-                                        }
-
-                                        lastDrag = panChange
-                                        val time = System.currentTimeMillis()
-                                        lastDragPeriod = time - lastDragTime
-                                        lastDragTime = time
-                                    }
-
-                                    if (!event.changes.fastAny { it.pressed } && zoomChange == 1f) {
-                                        // Prevent lastDragPeriod = 0
-                                        lastDragPeriod += 1
-
-                                        flingJob = coroutineScope.launch {
-                                            var lastValue = 0f
-                                            val flingDistance = lastDrag.getDistance()
-                                            val flingVector = lastDrag / flingDistance
-                                            AnimationState(
-                                                    initialValue = 0f,
-                                                    initialVelocity = flingDistance / lastDragPeriod * 1000
-                                            ).animateDecay(flingSpec) {
-                                                if (!isActive) return@animateDecay
-
-                                                val delta = value - lastValue
-                                                state.imageRect?.let {
-                                                    state.setImageRectWithBound(it.translate(flingVector * delta))
-                                                }
-                                                lastValue = value
-                                            }
-                                        }
-                                    }
-                                }
+                        detectTapGestures(onDoubleTap = { centroid ->
+                            coroutineScope.launch {
+                                state.zoom(1f, centroid, true)
                             }
-                        } while (!canceled && event.changes.fastAny { it.pressed })
+                        })
                     }
-                }
-            }.pointerInput(Unit) {
-                detectTapGestures(onDoubleTap = { centroid ->
-                    coroutineScope.launch {
-                        state.zoom(1f, centroid, true)
-                    }
-                })
+                else
+                    this
             }
     ) {
         if (size.width != 0F && size.height != 0F)

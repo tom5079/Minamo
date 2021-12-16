@@ -60,6 +60,8 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
         }
     }
 
+    var isGestureEnabled by mutableStateOf(false)
+
     private var zoomAnimationJob: Job? = null
     /**
      * Enlarge [imageRect] by [amount] centered around [centroid]
