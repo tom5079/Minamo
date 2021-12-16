@@ -32,7 +32,7 @@ fun rememberSubSampledImageState(scaleType: ScaleType = ScaleTypes.CENTER_INSIDE
 class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
 
     var canvasSize by mutableStateOf<Size?>(null)
-        internal set
+        private set
 
     var imageSize by mutableStateOf<Size?>(null)
         internal set
@@ -51,6 +51,15 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
      */
     var imageRect by mutableStateOf<Rect?>(null)
         private set
+
+    fun setCanvasSizeWithBound(size: Size) {
+        zoomAnimationJob?.cancel()
+
+        canvasSize = size
+        imageRect = imageRect?.let { imageRect ->
+            bound(imageRect, size)
+        }
+    }
 
     fun setImageRectWithBound(rect: Rect) {
         zoomAnimationJob?.cancel()

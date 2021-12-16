@@ -266,7 +266,7 @@ fun SubSampledImage(
             }
     ) {
         if (size.width != 0F && size.height != 0F)
-            state.canvasSize = size.copy()
+            state.setCanvasSizeWithBound(size.copy())
 
         state.imageSize?.let { imageSize ->
         state.imageRect?.let { imageRect ->
