@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-  implementation("xyz.quaver:subsampledimage:0.0.1-alpha09-SNAPSHOT")
+  implementation("xyz.quaver:subsampledimage:0.0.1-alpha10-SNAPSHOT")
 }
 ...
 
