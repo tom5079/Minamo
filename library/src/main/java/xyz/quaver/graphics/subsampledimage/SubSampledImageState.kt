@@ -18,11 +18,13 @@ package xyz.quaver.graphics.subsampledimage
 
 import androidx.compose.animation.core.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.ImageBitmap
 import kotlinx.coroutines.*
+import org.kodein.log.LoggerFactory
+import org.kodein.log.newLogger
 
 @Composable
 fun rememberSubSampledImageState(scaleType: ScaleType = ScaleTypes.CENTER_INSIDE, bound: Bound = Bounds.FORCE_OVERLAP_OR_CENTER) = remember {
@@ -30,6 +32,8 @@ fun rememberSubSampledImageState(scaleType: ScaleType = ScaleTypes.CENTER_INSIDE
 }
 
 class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
+
+    private val logger = newLogger(LoggerFactory.default)
 
     var canvasSize by mutableStateOf<Size?>(null)
         private set
@@ -52,8 +56,18 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
     var imageRect by mutableStateOf<Rect?>(null)
         private set
 
+    /**
+     * Returns pair of width scale and height scale
+     */
+    val scale by derivedStateOf {
+        imageSize?.let { imageSize ->
+        imageRect?.let { imageRect ->
+            imageRect.width / imageSize.width to imageRect.height / imageSize.height
+        } }
+    }
+
     fun setCanvasSizeWithBound(size: Size) {
-        zoomAnimationJob?.cancel()
+        imageRectAnimationJob?.cancel()
 
         canvasSize = size
         imageRect = imageRect?.let { imageRect ->
@@ -61,57 +75,57 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
         }
     }
 
-    fun setImageRectWithBound(rect: Rect) {
-        zoomAnimationJob?.cancel()
+    private var imageRectAnimationJob: Job? = null
 
+    fun setImageRectWithBound(rect: Rect) {
+        runBlocking {
+            imageRectAnimationJob?.cancelAndJoin()
+        }
         canvasSize?.let { canvasSize ->
             imageRect = bound(rect, canvasSize)
         }
     }
 
-    var isGestureEnabled by mutableStateOf(false)
-
-    private var zoomAnimationJob: Job? = null
     /**
-     * Enlarge [imageRect] by [amount] centered around [centroid]
-     *
-     * For example, [amount] 0.2 inflates [imageRect] by 20%
-     *              [amount] -0.2 deflates [imageRect] by 20%
+     * Sets rect as a new imageRect with animation
+     * Does nothing when canvasSize is not initialized
+     * Does not animate when imageRect is not initialized
      */
-    suspend fun zoom(amount: Float, centroid: Offset, isAnimated: Boolean = false) = coroutineScope {
-        zoomAnimationJob?.cancelAndJoin()
-
-        zoomAnimationJob = launch {
+    suspend fun setImageRectWithBound(rect: Rect, animationSpec: AnimationSpec<Rect>) = coroutineScope {
+        imageRectAnimationJob?.cancelAndJoin()
+        imageRectAnimationJob = launch {
+            canvasSize?.let { canvasSize ->
             imageRect?.let { imageRect ->
-                val animationSpec: AnimationSpec<Float> = if (isAnimated) spring() else snap()
-
-                val anim = AnimationState(
-                    initialValue = 0f,
-                    initialVelocity = 0f
+                val animation = AnimationState(
+                    Rect.VectorConverter,
+                    imageRect
                 )
 
-                anim.animateTo(
-                    targetValue = amount,
-                    animationSpec = animationSpec,
-                    sequentialAnimation = false
+                animation.animateTo(
+                    targetValue = rect,
+                    animationSpec = animationSpec
                 ) {
-                    if (!this@launch.isActive) cancelAnimation()
+                    if (!isActive) { cancelAnimation() }
 
-                    this@SubSampledImageState.imageRect = Rect(
-                        imageRect.left + (imageRect.left - centroid.x) * value,
-                        imageRect.top + (imageRect.top - centroid.y) * value,
-                        imageRect.right + (imageRect.right - centroid.x) * value,
-                        imageRect.bottom + (imageRect.bottom - centroid.y) * value
-                    )
+                    this@SubSampledImageState.imageRect = bound(value, canvasSize)
                 }
-            }
+            } }
         }
     }
+
+    var isGestureEnabled by mutableStateOf(false)
 
     fun resetImageRect() {
         imageSize?.let { imageSize ->
         canvasSize?.let { canvasSize ->
-            setImageRectWithBound(scaleType.invoke(canvasSize, imageSize))
+            setImageRectWithBound(scaleType(canvasSize, imageSize))
+        } }
+    }
+
+    suspend fun resetImageRect(animationSpec: AnimationSpec<Rect>) {
+        imageSize?.let { imageSize ->
+        canvasSize?.let { canvasSize ->
+            setImageRectWithBound(scaleType(canvasSize, imageSize), animationSpec)
         } }
     }
 }

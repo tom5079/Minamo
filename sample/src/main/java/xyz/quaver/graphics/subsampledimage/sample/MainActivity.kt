@@ -19,19 +19,27 @@ package xyz.quaver.graphics.subsampledimage.sample
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 import xyz.quaver.graphics.subsampledimage.*
@@ -41,25 +49,13 @@ class MainActivity : ComponentActivity() {
 
     val logger = newLogger(LoggerFactory.default)
 
-    @ExperimentalMaterialApi
+    @OptIn(ExperimentalMaterialApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val imageSource = resources.assets.open("card.png").use { rememberInputStreamImageSource(it) }
 
-            val states = remember {
-                List(5) { _ ->
-                    SubSampledImageState(ScaleTypes.FIT_WIDTH, Bounds.FORCE_OVERLAP_OR_CENTER)
-                }
-            }
-
             var isGestureEnabled by remember { mutableStateOf(false) }
-
-            LaunchedEffect(isGestureEnabled) {
-                states.forEach {
-                    it.isGestureEnabled = isGestureEnabled
-                }
-            }
 
             SubSamplingImageViewTheme {
                 BottomSheetScaffold(
@@ -78,21 +74,16 @@ class MainActivity : ComponentActivity() {
                     }, sheetPeekHeight = 32.dp
                 ) {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(states) { state ->
-                            val height by produceState<Float?>(null, state.canvasSize, state.imageSize) {
-                                if (value != null) return@produceState
-
-                                state.canvasSize?.let { canvasSize ->
-                                    state.imageSize?.let { imageSize ->
-                                        value = imageSize.height * canvasSize.width / imageSize.width
-                                    } }
+                        items(5) {
+                            val state = rememberSubSampledImageState(ScaleTypes.FIT_WIDTH).also {
+                                it.isGestureEnabled = isGestureEnabled
                             }
 
                             SubSampledImage(
                                 modifier = Modifier
-                                    .height(height?.let { with(LocalDensity.current) { it.toDp() } }
-                                        ?: 128.dp)
-                                    .fillMaxWidth(),
+                                    .wrapContentHeight(state, 128.dp)
+                                    .fillMaxWidth()
+                                    .doubleClickCycleZoom(state),
                                 imageSource = imageSource,
                                 state = state)
                         }

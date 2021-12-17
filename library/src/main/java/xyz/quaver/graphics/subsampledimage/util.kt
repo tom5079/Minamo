@@ -18,16 +18,30 @@ package xyz.quaver.graphics.subsampledimage
 
 import android.graphics.BitmapRegionDecoder
 import android.os.Build
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.animateDecay
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.*
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.consumeAllChanges
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChangeConsumed
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAny
 import androidx.compose.ui.util.fastForEach
 import kotlinx.coroutines.*
@@ -139,5 +153,88 @@ suspend fun PointerInputScope.detectGesturesAndFling(coroutineScope: CoroutineSc
                 }
             } while (!canceled && event.changes.fastAny { it.pressed })
         }
+    }
+}
+
+fun Modifier.wrapContentHeight(
+    state: SubSampledImageState,
+    defaultHeight: Dp
+) = composed {
+    val height by produceState<Float?>(null, state.canvasSize, state.imageSize) {
+        if (value != null) return@produceState
+
+        state.canvasSize?.let { canvasSize ->
+            state.imageSize?.let { imageSize ->
+                value = imageSize.height * canvasSize.width / imageSize.width
+            } }
+    }
+
+    height(height?.let { with(LocalDensity.current) { it.toDp() } } ?: defaultHeight)
+}
+
+fun Modifier.doubleClickCycleZoom(
+    state: SubSampledImageState,
+    scale: Float = 2f,
+    animationSpec: AnimationSpec<Rect> = spring()
+) = composed {
+    val initialImageRect by produceState<Rect?>(null, state.canvasSize, state.imageSize) {
+        state.canvasSize?.let { canvasSize ->
+            state.imageSize?.let { imageSize ->
+                value = state.bound(state.scaleType(canvasSize, imageSize), canvasSize)
+            } }
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    pointerInput(Unit) {
+        detectTapGestures(
+            onDoubleTap = { centroid ->
+                val imageRect = state.imageRect
+                coroutineScope.launch {
+                    if (imageRect == null || imageRect != initialImageRect)
+                        state.resetImageRect(animationSpec)
+                    else {
+                        state.setImageRectWithBound(
+                            Rect(
+                                Offset(
+                                    centroid.x - (centroid.x - imageRect.left) * scale,
+                                    centroid.y - (centroid.y - imageRect.top) * scale
+                                ),
+                                imageRect.size * scale
+                            ), animationSpec
+                        )
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun Modifier.doubleClickContinuousZoom(
+    state: SubSampledImageState,
+    scale: Float = 2f,
+    animationSpec: AnimationSpec<Rect> = spring()
+) = composed {
+    val coroutineScope = rememberCoroutineScope()
+
+    pointerInput(Unit) {
+        detectTapGestures(
+            onDoubleTap = { centroid ->
+                state.imageRect?.let { imageRect ->
+                    coroutineScope.launch {
+                        state.setImageRectWithBound(
+                            Rect(
+                                Offset(
+                                    centroid.x - (centroid.x - imageRect.left) * scale,
+                                    centroid.y - (centroid.y - imageRect.top) * scale
+                                ),
+                                imageRect.size * scale
+                            ), animationSpec
+                        )
+                    }
+                }
+            }
+        )
     }
 }

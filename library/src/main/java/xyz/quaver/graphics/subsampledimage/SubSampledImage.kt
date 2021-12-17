@@ -188,19 +188,12 @@ fun SubSampledImage(
                 if (state.isGestureEnabled)
                     pointerInput(Unit) {
                         detectGesturesAndFling(coroutineScope, onGesture, onFling)
-                    }.pointerInput(Unit) {
-
-                        detectTapGestures(onDoubleTap = { centroid ->
-                            coroutineScope.launch {
-                                state.zoom(1f, centroid, true)
-                            }
-                        })
                     }
                 else
                     this
             }
     ) {
-        if (size.width != 0F && size.height != 0F)
+        if (size.width != 0F && size.height != 0F && state.canvasSize != size)
             state.setCanvasSizeWithBound(size.copy())
 
         state.imageSize?.let { imageSize ->
