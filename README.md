@@ -11,6 +11,8 @@ Possible replacement for [davemorrissey/subsampling-scale-image-view](https://gi
 - Zooming and panning out of the box
 - Supports all image types supported by [BigmapRegionDecoder](https://developer.android.com/reference/android/graphics/BitmapRegionDecoder)
 - Currently supports ByteArray and InputStream & custom imagesources
+- Supports automatic height adjustment based on the content
+- Supports animated image zooming/panning
 
 # Documentation
 
@@ -111,6 +113,35 @@ Available Bounds:
 |NO_BOUND|No Bound|
 |FORCE_OVERLAP|Forces `imageRect` to always overlap with `canvasSize`. a.k.a. No Whitespace|
 |FORCE_OVERLAP_OR_CENTER|Forces `imageRect` to overlap with `canvasSize`, center if not possible. Do not allow images to go smaller than canvasSize|
+
+## Auto Height Adjustments
+
+SubSampledImage supports automatic height based on loaded image  
+call `Modifier.wrapContentHeight(state: SubSampledImageState, defaultHeight: Dp)`  
+the height is fixed to supplied `defaultHeight` until the image loads and changes height based on the aspect ratio of the image  
+:warning: ***use `ScaleTypes.FIT_WIDTH` as a scaleType***  
+
+Open an issue if you want this feature with the width
+
+## Gestures
+
+### Enable Zooming/Panning
+set `state.isGestureEnabled` to true to enable this feature  
+default value is `false`
+
+### Double Tap Zoom
+call one of the following to enable double tap zoom
+```kotlin
+Modifier.doubleClickCycleZoom(state, scale)
+Modifier.doubleClickContinuousZoom(state, scale)
+```
+
+`Modifier.doubleClickCycleZoom(state, scale)` cycles between `scale` and original scale
+`Modifier.doubleClickContinuousZoom(state, scale)` continues to zoom in
+
+## Animated Panning/Zooming
+call `state.setImageRectWithBound(Rect, animationSpec)` to animate panning and zooming.  
+see chapter `Three Important Rectangles` and [double tap zoom source code](https://github.com/tom5079/SubSampledImage/blob/cfa1dcbe476817f31493cc7089825f730a824325/library/src/main/java/xyz/quaver/graphics/subsampledimage/util.kt#L214) to learn more
 
 # Credits
 
