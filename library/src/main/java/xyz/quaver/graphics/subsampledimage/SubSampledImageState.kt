@@ -66,7 +66,7 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
         } }
     }
 
-    fun setCanvasSizeWithBound(size: Size) {
+    internal fun setCanvasSizeWithBound(size: Size) {
         imageRectAnimationJob?.cancel()
 
         canvasSize = size

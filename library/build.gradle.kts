@@ -23,7 +23,7 @@ plugins {
 }
 
 group = "xyz.quaver"
-version = "0.0.1-alpha11-SNAPSHOT"
+version = "0.0.1-alpha12-SNAPSHOT"
 
 android {
     compileSdk = 31
@@ -52,7 +52,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.0.2"
+        kotlinCompilerExtensionVersion = "1.0.5"
     }
 
     compileOptions {
@@ -118,7 +118,6 @@ afterEvaluate {
                     developers {
                         developer {
                             id.set("tom5079")
-                            name.set("Minseok Son")
                             email.set("tom5079@naver.com")
                         }
                     }

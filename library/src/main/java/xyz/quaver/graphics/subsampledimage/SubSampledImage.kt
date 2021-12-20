@@ -36,13 +36,16 @@ import kotlin.math.min
 fun SubSampledImage(
     modifier: Modifier = Modifier,
     imageSource: ImageSource? = null,
-    state: SubSampledImageState = rememberSubSampledImageState()
+    state: SubSampledImageState = rememberSubSampledImageState(),
+    onError: (Throwable) -> Unit = { }
 ) {
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(imageSource) {
         launch (Dispatchers.Default) {
-            state.imageSize = imageSource?.imageSize
+            state.imageSize = runCatching {
+                imageSource?.imageSize
+            }.onFailure(onError).getOrNull()
         }
     }
 
@@ -58,10 +61,12 @@ fun SubSampledImage(
         state.canvasSize?.let { canvasSize ->
         state.imageSize?.let { imageSize ->
             launch (Dispatchers.Default) {
-                state.baseTile = imageSource?.decodeRegion(
-                    Rect(Offset(0f, 0f), imageSize),
-                    getMaxSampleSize(canvasSize, imageSize)
-                )
+                state.baseTile = runCatching {
+                    imageSource?.decodeRegion(
+                        Rect(Offset(0f, 0f), imageSize),
+                        getMaxSampleSize(canvasSize, imageSize)
+                    )
+                }.onFailure(onError).getOrNull()
             }
         } }
     }
