@@ -145,7 +145,7 @@ fun SubSampledImage(
                         )
                     )
 
-                    if (canvasRect.overlaps(tileRect)) tile.load(imageSource) else tile.unload()
+                    if (canvasRect.overlaps(tileRect)) tile.load(imageSource, onError) else tile.unload()
                 }
             }
         } } } }

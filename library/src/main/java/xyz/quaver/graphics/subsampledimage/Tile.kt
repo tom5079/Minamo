@@ -46,19 +46,21 @@ data class Tile(
     private var loadingJob: Job? = null
     var bitmap by mutableStateOf<ImageBitmap?>(null)
 
-    suspend fun load(imageSource: ImageSource) = coroutineScope {
+    suspend fun load(imageSource: ImageSource, onError: (Throwable) -> Unit) = coroutineScope {
         loadingJob?.cancel()
 
         if (bitmap != null) return@coroutineScope
 
         loadingJob = tileLoadCoroutineScope.launch {
-            imageSource.decodeRegion(rect, sampleSize).let {
-                if (!isActive) return@let
-                mutex.withLock {
-                    if (!isActive) return@withLock
-                    bitmap = it
+            runCatching {
+                imageSource.decodeRegion(rect, sampleSize).let {
+                    if (!isActive) return@let
+                    mutex.withLock {
+                        if (!isActive) return@withLock
+                        bitmap = it
+                    }
                 }
-            }
+            }.onFailure(onError)
         }
     }
 
