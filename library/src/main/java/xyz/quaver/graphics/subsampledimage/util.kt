@@ -24,6 +24,7 @@ import androidx.compose.animation.core.animateDecay
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -164,12 +165,28 @@ fun Modifier.wrapContentHeight(
         if (value != null) return@produceState
 
         state.canvasSize?.let { canvasSize ->
-            state.imageSize?.let { imageSize ->
-                value = imageSize.height * canvasSize.width / imageSize.width
-            } }
+        state.imageSize?.let { imageSize ->
+            value = imageSize.height * canvasSize.width / imageSize.width
+        } }
     }
 
-    height(height?.let { with(LocalDensity.current) { it.toDp() } } ?: defaultHeight)
+    height(height?.let { LocalDensity.current.run { it.toDp() } } ?: defaultHeight)
+}
+
+fun Modifier.wrapContentWidth(
+    state: SubSampledImageState,
+    defaultWidth: Dp
+) = composed {
+    val width by produceState<Float?>(null, state.canvasSize, state.imageSize) {
+        if (value != null) return@produceState
+
+        state.canvasSize?.let { canvasSize ->
+        state.imageSize?.let { imageSize ->
+            value = imageSize.width * canvasSize.height / imageSize.height
+        } }
+    }
+
+    width(width?.let { LocalDensity.current.run { it.toDp() } } ?: defaultWidth)
 }
 
 fun Modifier.doubleClickCycleZoom(
