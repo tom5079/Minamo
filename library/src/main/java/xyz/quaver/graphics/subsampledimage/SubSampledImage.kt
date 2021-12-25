@@ -192,7 +192,8 @@ fun SubSampledImage(
         modifier
             .clipToBounds()
             .onGloballyPositioned {
-                state.setCanvasSizeWithBound(it.size.toSize())
+                if (it.size.width != 0 && it.size.height != 0 && it.size.toSize() != state.canvasSize)
+                    state.setCanvasSizeWithBound(it.size.toSize())
             }
             .run {
                 if (state.isGestureEnabled)
