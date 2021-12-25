@@ -27,8 +27,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.*
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.toSize
 import kotlinx.coroutines.*
 import kotlin.math.min
 
@@ -189,6 +191,9 @@ fun SubSampledImage(
     Canvas(
         modifier
             .clipToBounds()
+            .onGloballyPositioned {
+                state.setCanvasSizeWithBound(it.size.toSize())
+            }
             .run {
                 if (state.isGestureEnabled)
                     pointerInput(Unit) {
@@ -198,9 +203,6 @@ fun SubSampledImage(
                     this
             }
     ) {
-        if (size.width != 0F && size.height != 0F && state.canvasSize != size)
-            state.setCanvasSizeWithBound(size.copy())
-
         state.imageSize?.let { imageSize ->
         state.imageRect?.let { imageRect ->
             state.tiles?.forEach { tile ->
