@@ -16,6 +16,7 @@
 
 package xyz.quaver.graphics.subsampledimage
 
+import android.util.Log
 import androidx.compose.animation.core.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Rect
@@ -78,9 +79,7 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
     private var imageRectAnimationJob: Job? = null
 
     fun setImageRectWithBound(rect: Rect) {
-        runBlocking {
-            imageRectAnimationJob?.cancelAndJoin()
-        }
+        imageRectAnimationJob?.cancel()
         canvasSize?.let { canvasSize ->
             imageRect = bound(rect, canvasSize)
         }
@@ -92,7 +91,7 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
      * Does not animate when imageRect is not initialized
      */
     suspend fun setImageRectWithBound(rect: Rect, animationSpec: AnimationSpec<Rect>) = coroutineScope {
-        imageRectAnimationJob?.cancelAndJoin()
+        imageRectAnimationJob?.cancel()
         imageRectAnimationJob = launch {
             canvasSize?.let { canvasSize ->
             imageRect?.let { imageRect ->
@@ -105,7 +104,7 @@ class SubSampledImageState(var scaleType: ScaleType, var bound: Bound) {
                     targetValue = rect,
                     animationSpec = animationSpec
                 ) {
-                    if (!isActive) { cancelAnimation() }
+                    if (!isActive) cancelAnimation()
 
                     this@SubSampledImageState.imageRect = bound(value, canvasSize)
                 }

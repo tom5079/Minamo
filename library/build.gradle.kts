@@ -23,7 +23,7 @@ plugins {
 }
 
 group = "xyz.quaver"
-version = "0.0.1-alpha16-SNAPSHOT"
+version = "0.0.1-alpha17-SNAPSHOT"
 
 android {
     compileSdk = 31
@@ -52,7 +52,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.0.5"
+        kotlinCompilerExtensionVersion = "1.1.0-rc01"
     }
 
     compileOptions {
@@ -65,13 +65,13 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.7.0")
 
-    implementation("androidx.compose.ui:ui:1.0.5")
-    implementation("androidx.compose.ui:ui-tooling:1.0.5")
-    implementation("androidx.compose.foundation:foundation:1.0.5")
-    implementation("androidx.compose.material:material:1.0.5")
-    implementation("androidx.compose.material:material-icons-core:1.0.5")
-    implementation("androidx.compose.material:material-icons-extended:1.0.5")
-    implementation("androidx.compose.ui:ui-util:1.0.5")
+    implementation("androidx.compose.ui:ui:1.1.0-rc01")
+    implementation("androidx.compose.ui:ui-tooling:1.1.0-rc01")
+    implementation("androidx.compose.foundation:foundation:1.1.0-rc01")
+    implementation("androidx.compose.material:material:1.1.0-rc01")
+    implementation("androidx.compose.material:material-icons-core:1.1.0-rc01")
+    implementation("androidx.compose.material:material-icons-extended:1.1.0-rc01")
+    implementation("androidx.compose.ui:ui-util:1.1.0-rc01")
 
     implementation("org.kodein.log:kodein-log-jvm:0.11.1")
 

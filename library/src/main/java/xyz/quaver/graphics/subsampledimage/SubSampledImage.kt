@@ -16,6 +16,7 @@
 
 package xyz.quaver.graphics.subsampledimage
 
+import android.util.Log
 import androidx.compose.animation.core.*
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.Canvas
