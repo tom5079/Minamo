@@ -95,7 +95,7 @@ Available ScaleTypes:
 |CENTER_INSIDE|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/CENTER_INSIDE_WIDTH.jpg?raw=true) ![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/CENTER_INSIDE_HEIGHT.jpg?raw=true)|Centers `imageRect` inside the `canvasSize` and resizes until one side of the image touches the border of `canvasSize`|
 |CENTER_CROP|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/CENTER_CROP_1.jpg?raw=true) ![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/CENTER_CROP_2.jpg?raw=true)|Centers `imageRect` inside the `canvasSize` and resizes until the length of one side is equal and other is equal or longer|
 |FIT_WIDTH|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/FIT_WIDTH.jpg?raw=true)|Fits width of `imageRect` to width of `canvasSize`|
-|FIT_HEIGHT|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/FIT_HEIGHT.jpg?raw=true)|Fits height of `imageRect` to with of `canvasSize`|
+|FIT_HEIGHT|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/FIT_HEIGHT.jpg?raw=true)|Fits height of `imageRect` to height of `canvasSize`|
 |FIT_XY|![](https://github.com/tom5079/SubSampledImage/blob/master/docs/images/FIT_XY.jpg?raw=true)|Fits `imageRect` inside `canvasSize`  (:warning: changes aspect ratio)|
 
 Open Issues/Pull Requests for more ScaleTypes or Implement your own function
