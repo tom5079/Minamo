@@ -45,6 +45,22 @@ object ScaleTypes {
             )
     }
 
+    val CENTER_CROP: ScaleType = { (canvasWidth, canvasHeight), (imageWidth, imageHeight) ->
+        val scale = max(canvasWidth / imageWidth, canvasHeight / imageHeight)
+
+        val scaledWidth: Float = scale * imageWidth
+        val scaledHeight: Float = scale * imageHeight
+
+        Rect(
+            Offset(
+                (canvasWidth - scaledWidth) / 2, (canvasHeight - scaledHeight) / 2
+            ),
+            Size(
+                scaledWidth, scaledHeight
+            )
+        )
+    }
+
     val CENTER: ScaleType = { (canvasWidth, canvasHeight), (imageWidth, imageHeight) ->
         Rect(
             Offset(
