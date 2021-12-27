@@ -19,6 +19,7 @@ package xyz.quaver.graphics.subsampledimage
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import kotlin.math.max
 
 typealias ScaleType = (canvasSize: Size, imageSize: Size) -> Rect
 
