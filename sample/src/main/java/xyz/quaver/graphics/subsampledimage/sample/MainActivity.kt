@@ -81,8 +81,9 @@ class MainActivity : ComponentActivity() {
 
                             SubSampledImage(
                                 modifier = Modifier
-                                    .wrapContentHeight(state, 128.dp)
                                     .fillMaxWidth()
+                                    .wrapContent(state)
+                                    .aspectRatio(1f)
                                     .doubleClickCycleZoom(state),
                                 imageSource = imageSource,
                                 state = state)
