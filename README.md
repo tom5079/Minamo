@@ -119,11 +119,9 @@ Available Bounds:
 ## Auto Size Adjustments
 
 SubSampledImage supports automatic height based on loaded image  
-call  
-`Modifier.wrapContentHeight(state: SubSampledImageState, defaultHeight: Dp)` or  
-`Modifier.wrapContentWidth(state: SubSampledImageState, defaultWidth: Dp)`  
-the width or height is fixed to supplied `defaultWidth`/`defaultHeight` until the image loads and changes height based on the aspect ratio of the image  
-:warning: ***use `ScaleTypes.FIT_WIDTH` for `wrapContentHeight` and `ScaleTypes.FIT_HEIGHT` for `wrapcontentWidth` as a scaleType***  
+use `Modifier.wrapContent(state: SubSampledImageState)`.
+It uses `Modifier.aspectRatio()`, so you need to specifiy either width or height before `wrapContent`.  
+To set a default aspect ratio, use `Modifier.aspectRatio()` **AFTER** `wrapContent()`
 
 ## Gestures
 
