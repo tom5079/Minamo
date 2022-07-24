@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.toSize
 import kotlinx.coroutines.*
+import java.lang.Float.max
 import kotlin.math.min
 
 @Composable
@@ -173,7 +174,7 @@ fun SubSampledImage(
 
     val onFling: suspend CoroutineScope.(Offset, Long) -> Unit = { lastDrag, lastDragPeriod ->
         var lastValue = 0f
-        val flingDistance = lastDrag.getDistance()
+        val flingDistance = max(lastDrag.getDistance(), 1f)
         val flingVector = lastDrag / flingDistance
         AnimationState(
             initialValue = 0f,
