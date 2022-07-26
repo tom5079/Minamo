@@ -51,6 +51,7 @@ import java.io.InputStream
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 
 fun calculateSampleSize(scale: Float): Int {
     var sampleSize = 1
@@ -61,9 +62,9 @@ fun calculateSampleSize(scale: Float): Int {
 }
 
 fun getMaxSampleSize(canvasSize: Size, imageSize: Size): Int {
-    val maxScale =
-        max(canvasSize.width / imageSize.width, canvasSize.height / imageSize.height)
-    return calculateSampleSize(maxScale)
+    val minScale =
+        min(canvasSize.width / imageSize.width, canvasSize.height / imageSize.height)
+    return calculateSampleSize(minScale)
 }
 
 fun Offset.toIntOffset() = IntOffset(this.x.toInt(), this.y.toInt())
