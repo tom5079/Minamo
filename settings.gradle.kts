@@ -17,4 +17,4 @@ pluginManagement {
 
 rootProject.name = "SubSampledImage"
 
-include(":android", ":desktop", ":common")
+include(":sample:android", ":sample:desktop", ":library")
