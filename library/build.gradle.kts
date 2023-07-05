@@ -1,4 +1,4 @@
-import org.jetbrains.compose.compose
+import org.jetbrains.kotlin.gradle.targets.jvm.tasks.KotlinJvmTest
 
 plugins {
     kotlin("multiplatform")
@@ -43,7 +43,9 @@ kotlin {
                 api(compose.preview)
             }
         }
-        val desktopTest by getting
+        val desktopTest by getting {
+
+        }
     }
 }
 
@@ -58,4 +60,19 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+}
+
+tasks.create<Exec>("buildNative") {
+    group = "build"
+
+    inputs.dir("../native")
+    outputs.dir("../native/build")
+
+    workingDir = file("../native")
+    commandLine("./build-native.sh")
+}
+
+tasks.withType<KotlinJvmTest> {
+    dependsOn("buildNative")
+    systemProperties("java.library.path" to rootDir.resolve("native/build").absolutePath)
 }

@@ -1,0 +1,3 @@
+[submodule "native/lib/libjpeg-turbo"]
+	path = native/lib/libjpeg-turbo
+	url = git@github.com:libjpeg-turbo/libjpeg-turbo.git

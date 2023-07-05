@@ -28,32 +28,3 @@ interface ImageSource {
     val imageSize: Size
     fun decodeRegion(region: Rect, sampleSize: Int): ImageBitmap
 }
-
-@Composable
-fun rememberByteArrayImageSource(image: ByteArray) = remember {
-    object: ImageSource {
-        private val decoder by lazy { newBitmapRegionDecoder(image, 0, image.size) }
-
-        override val imageSize by lazy { Size(decoder.width.toFloat(), decoder.height.toFloat()) }
-
-        override fun decodeRegion(region: Rect, sampleSize: Int) =
-            decoder.decodeRegion(region.toAndroidRect(), BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-            }).asImageBitmap()
-
-    }
-}
-
-@Composable
-fun rememberInputStreamImageSource(inputStream: InputStream) = remember {
-    object: ImageSource {
-        private val decoder = newBitmapRegionDecoder(inputStream)
-
-        override val imageSize by lazy { Size(decoder.width.toFloat(), decoder.height.toFloat()) }
-
-        override fun decodeRegion(region: Rect, sampleSize: Int) =
-            decoder.decodeRegion(region.toAndroidRect(), BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
-            }).asImageBitmap()
-    }
-}

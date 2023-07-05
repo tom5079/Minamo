@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="library-desktop-1.0-SNAPSHOT">
+    <output-path>$PROJECT_DIR$/library/build/libs</output-path>
+    <root id="archive" name="library-desktop-1.0-SNAPSHOT.jar">
+      <element id="module-output" name="SubSampledImage.library.desktopMain" />
+    </root>
+  </artifact>
+</component>

@@ -56,24 +56,6 @@ fun getMaxSampleSize(canvasSize: Size, imageSize: Size): Int {
 fun Offset.toIntOffset() = IntOffset(this.x.toInt(), this.y.toInt())
 fun Size.toIntSize() = IntSize(this.width.toInt(), this.height.toInt())
 
-fun newBitmapRegionDecoder(data: ByteArray, offset: Int, length: Int) =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-        BitmapRegionDecoder.newInstance(data, offset, length)
-    else
-        BitmapRegionDecoder.newInstance(data, offset, length, false)
-
-fun newBitmapRegionDecoder(pathName: String) =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-        BitmapRegionDecoder.newInstance(pathName)
-    else
-        BitmapRegionDecoder.newInstance(pathName, false)
-
-fun newBitmapRegionDecoder(`is`: InputStream) =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-        BitmapRegionDecoder.newInstance(`is`)!!
-    else
-        BitmapRegionDecoder.newInstance(`is`, false)!!
-
 private var flingJob: Job? = null
 suspend fun PointerInputScope.detectGesturesAndFling(coroutineScope: CoroutineScope, onGesture: (Offset, Offset, Float, Float) -> Boolean, onFling: suspend CoroutineScope.(Offset, Long) -> Unit) {
     forEachGesture {
