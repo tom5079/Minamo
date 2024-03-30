@@ -99,3 +99,7 @@ cmake .. \
     -DANDROID_PLATFORM=23 \
     -DMESON_CROSS_FILE_ARG=--cross-file=$(readlink -f ../cmake/cross-file-${1}.txt)
 cmake --build .
+
+for lib in fakeroot/lib/*so; do
+    $TOOLCHAIN/bin/llvm-strip $lib
+done
