@@ -12,10 +12,11 @@ Java_xyz_quaver_graphics_subsampledimage_FileImageSource_load(JNIEnv *env,
     VipsSource *vipsSource = vips_source_new_from_file(filename);
 
     if (!vipsSource) {
+        puts(vips_error_buffer());
         return NULL;
     }
 
-    return newLongObject(env, vipsSource);
+    return newLongObject(env, (jlong) vipsSource);
 }
 
 JNIEXPORT void JNICALL

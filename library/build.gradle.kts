@@ -10,9 +10,9 @@ group = "xyz.quaver.subsampledimage"
 version = "1.0-SNAPSHOT"
 
 kotlin {
-    android()
+    androidTarget()
     jvm("desktop") {
-        jvmToolchain(11)
+        jvmToolchain(17)
     }
     sourceSets {
         val commonMain by getting {
@@ -29,8 +29,8 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
-                api("androidx.appcompat:appcompat:1.5.1")
-                api("androidx.core:core-ktx:1.9.0")
+                api("androidx.appcompat:appcompat:1.6.1")
+                api("androidx.core:core-ktx:1.12.0")
             }
         }
         val desktopMain by getting {
@@ -45,11 +45,11 @@ kotlin {
 }
 
 android {
-    compileSdkVersion(33)
+    compileSdk = 34
+    namespace = "xyz.quaver.subsampledimage"
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     defaultConfig {
-        minSdkVersion(24)
-        targetSdkVersion(33)
+        minSdk = 24
 
         ndk {
             abiFilters.apply {
@@ -58,8 +58,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
@@ -74,10 +74,16 @@ tasks.create<Exec>("buildNative") {
 }
 
 tasks.create<Exec>("buildAndroidNative") {
+    dependsOn("buildNative")
     group = "build"
 
     inputs.dir("../native")
-    outputs.dir("../native/build")
+    outputs.dirs(
+        "../native/build-ndk-aarch64",
+        "../native/build-ndk-armv7a",
+        "../native/build-ndk-i686",
+        "../native/build-ndk-x86_64"
+    )
 
     workingDir = file("../native")
     commandLine("./build-ndk.sh")

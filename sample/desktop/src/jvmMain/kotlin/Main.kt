@@ -15,9 +15,10 @@ fun main() = application {
         var image: ImageBitmap? by remember { mutableStateOf(null) }
 
         LaunchedEffect(Unit) {
-            image = loadImageFromFile("native/test/image.avif").use {
-                it.readRegion(startX = 500, startY = 500, width = 1000, height = 1000)
-            }
+            image =
+                loadImageFromFile("/home/tom5079/Downloads/boiler-portrait-posterised-interlaced-256w.png.jxl").use {
+                    it.readRegion()
+                }
         }
 
         image?.let {

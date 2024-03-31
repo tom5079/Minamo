@@ -28,6 +28,13 @@ LIBRARIES=(
     "libheif.so"
     "libde265.so"
     "libdav1d.so"
+    "libhwy.so"
+    "libjxl.so"
+    "libjxl_threads.so"
+    "libjxl_cms.so"
+    "libbrotlidec.so"
+    "libbrotlienc.so"
+    "libbrotlicommon.so"
 )
 
 working_directory=$(pwd)

@@ -1,4 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.InternalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.targets.jvm.tasks.KotlinJvmRun
 
 plugins {
     kotlin("multiplatform")
@@ -11,7 +13,7 @@ version = "1.0-SNAPSHOT"
 
 kotlin {
     jvm {
-        jvmToolchain(11)
+        jvmToolchain(17)
         withJava()
     }
     sourceSets {
@@ -34,4 +36,11 @@ compose.desktop {
             packageVersion = "1.0.0"
         }
     }
+}
+
+@OptIn(InternalKotlinGradlePluginApi::class)
+tasks.withType<KotlinJvmRun> {
+    val libraryPath = rootDir.resolve("native/build/fakeroot/lib").absolutePath
+    environment("LD_LIBRARY_PATH", libraryPath)
+    systemProperty("java.library.path", libraryPath)
 }

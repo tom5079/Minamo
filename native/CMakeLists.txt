@@ -101,6 +101,16 @@ if (USE_SUPERBUILD)
         include("cmake/heif.cmake")
     endif()
 
+    find_library(highway_LIB NAMES hwy PATHS ${THIRD_PARTY_LIB_PATH} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+    if(NOT highway_LIB)
+        include("cmake/highway.cmake")
+    endif()
+
+    find_library(jxl_LIB NAMES jxl PATHS ${THIRD_PARTY_LIB_PATH} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+    if(NOT jxl_LIB)
+        include("cmake/jxl.cmake")
+    endif()
+
     find_library(VIPS_LIB NAMES vips PATHS ${THIRD_PARTY_LIB_PATH} PATH_SUFFIXES lib NO_DEFAULT_PATH)
     if(NOT VIPS_LIB)
         include("cmake/vips.cmake")

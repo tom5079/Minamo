@@ -2,17 +2,18 @@ include(ExternalProject)
 
 if ($ENV{TARGET} MATCHES ".*android.*")
     set(ENV_PATHS PKG_CONFIG_PATH=${THIRD_PARTY_LIB_PATH}/lib/pkgconfig LIBRARY_PATH=${THIRD_PARTY_LIB_PATH}/lib LD_LIBRARY_PATH=${THIRD_PARTY_LIB_PATH}/lib:$ENV{LD_LIBRARY_PATH}) 
-    set(EXTRA_FLAGS -Dlibelf=disabled)
+    set(EXTRA_FLAGS -Dlibelf=disabled -Dintrospection=disabled)
 endif()
 
 list(APPEND DEPENDENCIES ep_glib)
 ExternalProject_Add(ep_glib
-    URL https://download.gnome.org/sources/glib/2.76/glib-2.76.4.tar.xz
-    URL_HASH SHA256=5a5a191c96836e166a7771f7ea6ca2b0069c603c7da3cba1cd38d1694a395dda
+    URL https://download.gnome.org/sources/glib/2.80/glib-2.80.0.tar.xz
+    URL_HASH SHA256=8228a92f92a412160b139ae68b6345bd28f24434a7b5af150ebe21ff587a561d
     CONFIGURE_COMMAND
         ${ENV_PATHS} ${Meson_EXECUTABLE} setup ${MESON_CROSS_FILE_ARG} --prefix=<INSTALL_DIR>
         <BINARY_DIR> <SOURCE_DIR>
-        ${EXTRA_FLAGS}
+        -Dlibelf=disabled
+        -Dintrospection=disabled
     BUILD_COMMAND
         ${Meson_EXECUTABLE} compile -C <BINARY_DIR>
     INSTALL_COMMAND

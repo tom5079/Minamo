@@ -1,10 +1,10 @@
 #!/bin/bash
 
+echo "$@ $(pkg-config "$@")" >> /tmp/pkg-config.log
+
 if [ "$2" != "zlib" ]; then
     exec pkg-config "$@"
 fi
-
-echo "$@ $(pkg-config "$@")" >> /tmp/zlib.log
 
 case $1 in
     --exists)

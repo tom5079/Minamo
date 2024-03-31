@@ -8,23 +8,24 @@ endif()
 
 ExternalProject_Add(ep_vips
     GIT_REPOSITORY      https://github.com/libvips/libvips.git
-    GIT_TAG             v8.14.5
+    GIT_TAG             v8.15.2
     CONFIGURE_COMMAND
         PKG_CONFIG_PATH=${THIRD_PARTY_LIB_PATH}/lib/pkgconfig LD_LIBRARY_PATH=${THIRD_PARTY_LIB_PATH}/lib:$ENV{LD_LIBRARY_PATH} ${Meson_EXECUTABLE} setup ${MESON_CROSS_FILE_ARG} --default-library shared --prefix=<INSTALL_DIR>
             -Dexamples=false
-            -Dintrospection=false
+            -Dintrospection=disabled
+            -Darchive=disabled
             -Dmagick=disabled
             -Dpangocairo=disabled
             -Dpoppler=disabled
             -Dopenexr=disabled
-            -Djpeg-xl=disabled
+            -Djpeg-xl=enabled
             -Dlcms=disabled
             -Dexif=disabled
             -Dheif=enabled
             -Dheif-module=disabled
             -Dmodules=disabled
             -Dopenjpeg=disabled
-            -Dorc=disabled
+            -Dhighway=enabled
             -Dpng=disabled
             -Dspng=enabled
             -Dcplusplus=false

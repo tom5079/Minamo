@@ -13,7 +13,7 @@ Java_xyz_quaver_graphics_subsampledimage_LocalUriImageSource_load(JNIEnv *env,
         return NULL;
     }
 
-    return newLongObject(env, vipsSource);
+    return newLongObject(env, (jlong) vipsSource);
 }
 
 JNIEXPORT void JNICALL

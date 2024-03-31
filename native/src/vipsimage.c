@@ -109,7 +109,7 @@ Java_xyz_quaver_graphics_subsampledimage_VipsImageImpl_load(JNIEnv *env,
 
     if (vips_image_guess_interpretation(image) != VIPS_INTERPRETATION_sRGB) {
         VipsImage *tmp;
-        if (vips_colourspace(image, &tmp, VIPS_INTERPRETATION_sRGB)) {
+        if (vips_colourspace(image, &tmp, VIPS_INTERPRETATION_sRGB, NULL)) {
             g_object_unref(image);
             return NULL;
         }
