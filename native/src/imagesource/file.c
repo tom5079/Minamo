@@ -4,7 +4,7 @@
 #include "../arch.h"
 
 JNIEXPORT jobject JNICALL
-Java_xyz_quaver_graphics_subsampledimage_FileImageSource_load(JNIEnv *env,
+Java_xyz_quaver_minamo_FileImageSource_load(JNIEnv *env,
                                                               jobject this,
                                                               jstring file) {
     const char *filename = (*env)->GetStringUTFChars(env, file, NULL);
@@ -20,7 +20,7 @@ Java_xyz_quaver_graphics_subsampledimage_FileImageSource_load(JNIEnv *env,
 }
 
 JNIEXPORT void JNICALL
-Java_xyz_quaver_graphics_subsampledimage_FileImageSource_close(JNIEnv *env,
+Java_xyz_quaver_minamo_FileImageSource_close(JNIEnv *env,
                                                                jobject this) {
     jclass class = (*env)->GetObjectClass(env, this);
 

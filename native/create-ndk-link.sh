@@ -6,7 +6,7 @@ declare -A ARCHS=(
 )
 
 LIBRARIES=(
-    "libssi.so"
+    "libminamo.so"
     "libvips.so"
     "libglib-2.0.so"
     "libgio-2.0.so"

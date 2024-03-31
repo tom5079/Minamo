@@ -4,7 +4,7 @@
 #include "../arch.h"
 
 JNIEXPORT jobject JNICALL
-Java_xyz_quaver_graphics_subsampledimage_LocalUriImageSource_load(JNIEnv *env,
+Java_xyz_quaver_minamo_LocalUriImageSource_load(JNIEnv *env,
                                                                         jobject this,
                                                                         jint descriptor) {
     VipsSource *vipsSource = vips_source_new_from_descriptor(descriptor);
@@ -17,7 +17,7 @@ Java_xyz_quaver_graphics_subsampledimage_LocalUriImageSource_load(JNIEnv *env,
 }
 
 JNIEXPORT void JNICALL
-Java_xyz_quaver_graphics_subsampledimage_LocalUriImageSource_closeSource(JNIEnv *env,
+Java_xyz_quaver_minamo_LocalUriImageSource_closeSource(JNIEnv *env,
                                                                                jobject this) {
     jclass class = (*env)->GetObjectClass(env, this);
 

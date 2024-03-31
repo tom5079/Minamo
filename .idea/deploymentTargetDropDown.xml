@@ -5,11 +5,24 @@
       <entry key="Android Sample">
         <State />
       </entry>
-      <entry key="MainActivity">
+      <entry key="sample">
         <State />
       </entry>
       <entry key="sample.android">
-        <State />
+        <State>
+          <targetSelectedWithDropDown>
+            <Target>
+              <type value="QUICK_BOOT_TARGET" />
+              <deviceKey>
+                <Key>
+                  <type value="VIRTUAL_DEVICE_PATH" />
+                  <value value="$USER_HOME$/.android/avd/Medium_Phone_API_34.avd" />
+                </Key>
+              </deviceKey>
+            </Target>
+          </targetSelectedWithDropDown>
+          <timeTargetWasSelectedWithDropDown value="2024-03-30T21:35:47.716452297Z" />
+        </State>
       </entry>
     </value>
   </component>
