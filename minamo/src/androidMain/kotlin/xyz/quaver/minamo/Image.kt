@@ -1,8 +1,10 @@
 package xyz.quaver.minamo
 
-actual class MinamoImageRegion {
+import android.graphics.Bitmap
 
-}
+actual class MinamoNativeImage(
+    val bitmap: Bitmap
+)
 
 class MinamoImageImpl internal constructor(
     source: ImageSource

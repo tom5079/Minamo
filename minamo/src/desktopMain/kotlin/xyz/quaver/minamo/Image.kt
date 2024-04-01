@@ -1,6 +1,12 @@
 package xyz.quaver.minamo
 
-actual class MinamoImageRegion {
+import java.awt.image.BufferedImage
+
+actual class MinamoNativeImage(
+    val image: BufferedImage
+)
+
+class MinamoImageRegionImpl : MinamoImageRegion {
 
 }
 

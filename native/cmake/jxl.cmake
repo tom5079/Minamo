@@ -1,6 +1,5 @@
 include(ExternalProject)
 
-list(APPEND DEPENDENCIES ep_jxl)
 ExternalProject_Add(ep_jxl
     GIT_REPOSITORY      https://github.com/libjxl/libjxl
     GIT_TAG             v0.10.2

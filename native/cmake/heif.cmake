@@ -1,9 +1,12 @@
 include(ExternalProject)
 
-list(APPEND DEPENDENCIES ep_heif)
+include("cmake/dav1d.cmake")
+include("cmake/de265.cmake")
+
 ExternalProject_Add(ep_heif
     GIT_REPOSITORY      https://github.com/strukturag/libheif.git
     GIT_TAG             v1.17.6
+    DEPENDS ep_dav1d ep_de265
     CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/fakeroot
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}

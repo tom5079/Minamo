@@ -1,6 +1,5 @@
 include(ExternalProject)
 
-list(APPEND DEPENDENCIES ep_highway)
 ExternalProject_Add(ep_highway
     GIT_REPOSITORY      https://github.com/google/highway
     GIT_TAG             1.1.0
