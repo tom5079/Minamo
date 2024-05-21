@@ -9,8 +9,8 @@ cd build
 # export PKG_CONFIG_SYSROOT_DIR=$SYSROOT
 export PKG_CONFIG_PATH="$(readlink -f .)/fakeroot/lib/pkgconfig"
 
-cmake ..
-cmake --build . -j
+cmake .. -G Ninja
+cmake --build .
 
 for lib in fakeroot/lib/*so; do
     strip $lib

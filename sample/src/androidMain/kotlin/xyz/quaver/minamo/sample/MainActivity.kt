@@ -41,9 +41,6 @@ class MainActivity : ComponentActivity() {
                             requestFileLauncher.launch(intent)
                         }
                     ) {
-                        Text(
-                            "Choose an image ${a}"
-                        )
                     }
                 } else {
                     Text("Test")

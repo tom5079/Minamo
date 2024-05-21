@@ -1,5 +1,3 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
@@ -23,7 +21,8 @@ kotlin {
 
         }
         commonMain.dependencies {
-
+            api(project(":minamo"))
+            implementation(libs.kotlinx.coroutines)
         }
         desktopMain.dependencies {
 
@@ -57,6 +56,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
     dependencies {
-        
+
     }
 }

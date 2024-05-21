@@ -4,39 +4,50 @@
 
 #include "arch.h"
 
-JNIEXPORT jint JNICALL
-Java_xyz_quaver_minamo_MinamoImageImpl_readPixels(
-    JNIEnv *env, jobject this, jbyteArray buffer, jint startX, jint startY,
-    jint width, jint height, jint bufferOffset, jint stride) {
+VipsImage* MinamoImage_getVipsImage(JNIEnv *env, jobject this) {
     jclass class = (*env)->GetObjectClass(env, this);
 
     jmethodID getVipsImage =
         (*env)->GetMethodID(env, class, "getVipsImage", "()J");
-    VipsImage *in =
-        (VipsImage *)((*env)->CallLongMethod(env, this, getVipsImage));
+    jlong image = (*env)->CallLongMethod(env, this, getVipsImage);
 
-    const jsize length = (*env)->GetArrayLength(env, buffer);
+    return (VipsImage *)image;
+}
 
-    if (length < bufferOffset + ((height - 1) / stride + 1) * ((width - 1) / stride + 1)) {
-        // Buffer too small
-        return 1;
+JNIEXPORT jobject JNICALL
+Java_xyz_quaver_minamo_MinamoImageImpl_readPixels(JNIEnv *env, jobject this,
+                                                  jobject rect) {
+    jclass class = (*env)->GetObjectClass(env, this);
+
+    VipsImage* image = MinamoImage_getVipsImage(env, this);
+
+    size_t x, y, width, height;
+    {
+        jclass rectClass = (*env)->GetObjectClass(env, rect);
+
+        jfieldID xField = (*env)->GetFieldID(env, rectClass, "x", "I");
+        jfieldID yField = (*env)->GetFieldID(env, rectClass, "y", "I");
+        jfieldID widthField = (*env)->GetFieldID(env, rectClass, "width", "I");
+        jfieldID heightField = (*env)->GetFieldID(env, rectClass, "height", "I");
+
+        x = (*env)->GetIntField(env, rect, xField);
+        y = (*env)->GetIntField(env, rect, yField);
+        width = (*env)->GetIntField(env, rect, widthField);
+        height = (*env)->GetIntField(env, rect, heightField);
     }
 
-    VipsRegion *region = vips_region_new(in);
-
-    VipsRect image = {0, 0, in->Xsize, in->Ysize};
-    VipsRect rect = {startX, startY, width, height};
-
-    if (in->BandFmt != VIPS_FORMAT_UCHAR) {
-        g_object_unref(region);
-        return 2;
-    }
+    VipsRect image = {0, 0, image->Xsize, image->Ysize};
+    VipsRect rect = {x, y, width, height};
 
     if (!vips_rect_includesrect(&image, &rect)) {
-        // Rect out of bound
-        g_object_unref(region);
-        return 3;
+        return NULL;
     }
+
+    if (image->BandFmt != VIPS_FORMAT_UCHAR) {
+        return NULL;
+    }
+
+    VipsRegion *region = vips_region_new(image);
 
     if (vips_region_prepare(region, &rect)) {
         g_object_unref(region);
@@ -76,34 +87,50 @@ Java_xyz_quaver_minamo_MinamoImageImpl_readPixels(
 }
 
 JNIEXPORT jboolean JNICALL
-Java_xyz_quaver_minamo_MinamoImageImpl_hasAlpha(JNIEnv *env, jobject this, jlong image) {
+Java_xyz_quaver_minamo_MinamoImageImpl_hasAlpha(
+    JNIEnv *env,
+    jobject this,
+    jlong image
+) {
     return vips_image_hasalpha((VipsImage *)image);
 }
 
 JNIEXPORT jint JNICALL
-Java_xyz_quaver_minamo_MinamoImageImpl_getHeight(JNIEnv *env, jobject this, jlong image) {
+Java_xyz_quaver_minamo_MinamoImageImpl_getHeight(
+    JNIEnv *env,
+    jobject this,
+    jlong image
+) {
     return vips_image_get_height((VipsImage *)image);
 }
 
 JNIEXPORT jint JNICALL
-Java_xyz_quaver_minamo_MinamoImageImpl_getWidth(JNIEnv *env, jobject this, jlong image) {
+Java_xyz_quaver_minamo_MinamoImageImpl_getWidth(
+    JNIEnv *env,
+    jobject this,
+    jlong image
+) {
     return vips_image_get_width((VipsImage *)image);
 }
 
 JNIEXPORT jlong JNICALL
-Java_xyz_quaver_minamo_MinamoImageImpl_load(JNIEnv *env, jobject this, jlong source) {
+Java_xyz_quaver_minamo_MinamoImageImpl_load(
+    JNIEnv *env,
+    jobject this,
+    jlong source
+) {
     VipsImage *image =
         vips_image_new_from_source((VipsSource *)source, "", NULL);
 
     if (!image) {
-        return NULL;
+        return (jlong) NULL;
     }
 
     if (vips_image_guess_interpretation(image) != VIPS_INTERPRETATION_sRGB) {
         VipsImage *tmp;
         if (vips_colourspace(image, &tmp, VIPS_INTERPRETATION_sRGB, NULL)) {
             g_object_unref(image);
-            return NULL;
+            return (jlong) NULL;
         }
 
         g_object_unref(image);

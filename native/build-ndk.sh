@@ -4,8 +4,6 @@
 # USAGE: NDK=<PATH_TO_NDK> TOOLCHAIN=<PATH_TO_TOOLCHAIN> ./build-ndk.sh <ARCHITECTURE>
 ######
 
-set -e
-
 if [ -z ${1} ]; then
     ./$0 armv7a
     ./$0 aarch64
@@ -13,6 +11,8 @@ if [ -z ${1} ]; then
     ./$0 x86_64
     exit
 fi
+
+set -e
 
 ARCH_LOOKUP=$(cat << EOL
 {
@@ -97,6 +97,10 @@ mkdir -p $PKG_CONFIG_LIBDIR
 mkdir -p $SYSROOT/include
 cd build-ndk-${1}
 
+# echo $SYSROOT
+# test -h $SYSROOT/lib/libz.so
+# echo $?
+
 [[ ! -h $SYSROOT/lib/libz.so ]] && ln -s $TOOLCHAIN/sysroot/usr/lib/$TARGET/$API/libz.so $SYSROOT/lib/libz.so
 [[ ! -h $SYSROOT/include/zlib.h ]] && ln -s $TOOLCHAIN/sysroot/usr/include/zlib.h $SYSROOT/include/zlib.h
 
@@ -122,10 +126,11 @@ cmake .. \
     -DCMAKE_PREFIX_PATH=$(readlink -f fakeroot) \
     -DCMAKE_FIND_ROOT_PATH=$(readlink -f fakeroot) \
     -DANDROID_ABI=$(echo $ARCH_LOOKUP | jq -r .${1}.arch_abi) \
-    -DAPI=$ANDROID_PLATFORM \
-    -DMESON_CROSS_FILE=$(readlink -f ../cmake/cross-file-${1}.txt)
-cmake --build . -j
+    -DANDROID_PLATFORM=$ANDROID_PLATFORM \
+    -DMESON_CROSS_FILE=$(readlink -f ../cmake/cross-file-${1}.txt) \
+    -G Ninja
+cmake --build .
 
 for lib in fakeroot/lib/*so; do
-    [[ ! -f $lib ]] || $TOOLCHAIN/bin/llvm-strip $lib
+    [[ -f $lib && ! -h $lib ]] && $TOOLCHAIN/bin/llvm-strip $lib
 done

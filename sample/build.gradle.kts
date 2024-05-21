@@ -26,6 +26,7 @@ kotlin {
         }
         commonMain.dependencies {
             implementation(project(":minamo"))
+            implementation(project(":minamo-aqua"))
             implementation(compose.runtime)
             implementation(compose.foundation)
             implementation(compose.material)

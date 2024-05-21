@@ -6,10 +6,6 @@ actual class MinamoNativeImage(
     val image: BufferedImage
 )
 
-class MinamoImageRegionImpl : MinamoImageRegion {
-
-}
-
 class MinamoImageImpl internal constructor(
     source: ImageSource
 ) : VipsImage {
@@ -27,28 +23,14 @@ class MinamoImageImpl internal constructor(
 
     init {
         System.loadLibrary("minamo")
-        _vipsImage = load(source.vipsSource) ?: error("error decoding file")
+        val vipsImage = load(source.vipsSource)
+
+        check(vipsImage != 0L) { "failed to decode image" }
+
+        _vipsImage = vipsImage
     }
 
-    override fun readRegion(
-        startX: Int,
-        startY: Int,
-        width: Int,
-        height: Int
-    ): MinamoImageRegion {
-        return MinamoImageRegion()
-    }
-
-    private external fun readPixels(
-        buffer: ByteArray,
-        startX: Int,
-        startY: Int,
-        width: Int,
-        height: Int,
-        bufferOffset: Int,
-        stride: Int
-    ): Int
-
+    external override fun image(rect: MinamoRect): MinamoNativeImage
     private external fun hasAlpha(image: VipsImagePtr): Boolean
     private external fun getHeight(image: VipsImagePtr): Int
     private external fun getWidth(image: VipsImagePtr): Int

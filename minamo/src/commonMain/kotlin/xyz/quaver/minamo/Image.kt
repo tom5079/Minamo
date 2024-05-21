@@ -5,28 +5,19 @@ typealias VipsRegionPtr = Long
 
 expect class MinamoNativeImage
 
-interface MinamoImageRegion {
+data class MinamoRect(
+    val x: Int,
+    val y: Int,
+    val width: Int,
     val height: Int
-    val width: Int
-
-    fun readImage(): MinamoNativeImage
-}
+)
 
 interface MinamoImage : AutoCloseable {
     val hasAlpha: Boolean
     val height: Int
     val width: Int
 
-    fun region(
-        startX: Int = 0,
-        startY: Int = 0,
-        width: Int = this.width,
-        height: Int = this.height,
-    ): MinamoImageRegion
-}
-
-internal interface VipsRegion : MinamoImageRegion {
-    val vipsRegion: VipsRegionPtr
+    fun image(rect: MinamoRect = MinamoRect(0, 0, width, height)): MinamoNativeImage
 }
 
 internal interface VipsImage : MinamoImage {

@@ -1,5 +1,10 @@
 include(ExternalProject)
 
+find_library(VIPS_LIB NAMES vips PATHS ${CMAKE_BINARY_DIR}/fakeroot PATH_SUFFIXES lib NO_DEFAULT_PATH)
+if(VIPS_LIB)
+    return()
+endif()
+
 include("cmake/glib.cmake")
 include("cmake/expat.cmake")
 include("cmake/spng.cmake")
