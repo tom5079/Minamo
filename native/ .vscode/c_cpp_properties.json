@@ -1,9 +1,0 @@
-{
-  "configurations": [
-    {
-      "compileCommands": "${workspaceFolder}/build/fakeroot/src/ep_minamo-build/compile_commands.json",
-      "cppStandard": "c++17"
-    }
-  ],
-  "version": 4
-}

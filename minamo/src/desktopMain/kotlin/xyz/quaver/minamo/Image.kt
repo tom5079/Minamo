@@ -1,18 +1,19 @@
 package xyz.quaver.minamo
 
-import java.awt.image.BufferedImage
+import java.awt.Image
 
 actual class MinamoNativeImage(
-    val image: BufferedImage
+    val image: Image
 )
 
 class MinamoImageImpl internal constructor(
-    source: ImageSource
+    private var _vipsImage: VipsImagePtr = 0L
 ) : VipsImage {
-
-    private var _vipsImage: VipsImagePtr? = null
     override val vipsImage: VipsImagePtr
-        get() = _vipsImage ?: error("tried to access closed VipsImage")
+        get() {
+            check(_vipsImage != 0L) { "tried to access closed VipsImage" }
+            return _vipsImage
+        }
 
     override val hasAlpha: Boolean
         get() = hasAlpha(vipsImage)
@@ -21,16 +22,19 @@ class MinamoImageImpl internal constructor(
     override val width: Int
         get() = getWidth(vipsImage)
 
-    init {
-        System.loadLibrary("minamo")
+    internal constructor(source: ImageSource) : this() {
         val vipsImage = load(source.vipsSource)
-
         check(vipsImage != 0L) { "failed to decode image" }
-
         _vipsImage = vipsImage
     }
 
-    external override fun image(rect: MinamoRect): MinamoNativeImage
+    init {
+        System.loadLibrary("minamo")
+    }
+
+    external override fun decode(rect: MinamoRect): MinamoNativeImage
+    external override fun resize(scale: Double): MinamoImage
+
     private external fun hasAlpha(image: VipsImagePtr): Boolean
     private external fun getHeight(image: VipsImagePtr): Int
     private external fun getWidth(image: VipsImagePtr): Int

@@ -8,10 +8,13 @@ class LocalUriImageSource(
     context: Context,
     uri: Uri
 ) : ImageSource, ContextWrapper(context) {
-    private var _vipsSource: VipsSourcePtr? = null
+    private var _vipsSource: VipsSourcePtr = 0L
 
     override val vipsSource: VipsSourcePtr
-        get() = _vipsSource ?: error("tried to access closed VipsSource")
+        get() {
+            check (_vipsSource != 0L) { "tried to access closed VipsSource" }
+            return _vipsSource
+        }
 
     private val descriptor = runCatching {
         contentResolver.openFileDescriptor(uri, "r")
@@ -19,10 +22,11 @@ class LocalUriImageSource(
 
     init {
         System.loadLibrary("minamo")
-        _vipsSource = load(descriptor.fd) ?: error("failed to open image $uri")
+        _vipsSource = load(descriptor.fd)
+        check(_vipsSource != 0L) { "failed to open image $uri" }
     }
 
-    private external fun load(descriptor: Int): VipsSourcePtr?
+    private external fun load(descriptor: Int): VipsSourcePtr
     private external fun closeSource()
 
     override fun close() {

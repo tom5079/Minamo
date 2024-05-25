@@ -3,20 +3,20 @@
 
 #include "../arch.h"
 
-JNIEXPORT jobject JNICALL
-Java_xyz_quaver_minamo_FileImageSource_load(JNIEnv *env,
-                                                              jobject this,
-                                                              jstring file) {
+JNIEXPORT jlong JNICALL
+Java_xyz_quaver_minamo_FileImageSource_load(JNIEnv *env, jobject this,
+    jstring file
+) {
     const char *filename = (*env)->GetStringUTFChars(env, file, NULL);
 
     VipsSource *vipsSource = vips_source_new_from_file(filename);
 
     if (!vipsSource) {
         puts(vips_error_buffer());
-        return NULL;
+        return (jlong) NULL;
     }
 
-    return newLongObject(env, (jlong) vipsSource);
+    return (jlong) vipsSource;
 }
 
 JNIEXPORT void JNICALL
@@ -32,7 +32,7 @@ Java_xyz_quaver_minamo_FileImageSource_close(JNIEnv *env,
     g_object_unref(vipsSource);
 
     jfieldID vipsSourceField =
-        (*env)->GetFieldID(env, class, "_vipsSource", "Ljava/lang/Long;");
-    (*env)->SetObjectField(env, this, vipsSourceField, NULL);
+        (*env)->GetFieldID(env, class, "_vipsSource", "J");
+    (*env)->SetObjectField(env, this, vipsSourceField, 0L);
     return;
 }

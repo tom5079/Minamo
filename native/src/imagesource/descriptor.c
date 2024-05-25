@@ -3,22 +3,21 @@
 
 #include "../arch.h"
 
-JNIEXPORT jobject JNICALL
-Java_xyz_quaver_minamo_LocalUriImageSource_load(JNIEnv *env,
-                                                                        jobject this,
-                                                                        jint descriptor) {
+JNIEXPORT jlong JNICALL
+Java_xyz_quaver_minamo_LocalUriImageSource_load(JNIEnv *env, jobject this,
+    jint descriptor
+) {
     VipsSource *vipsSource = vips_source_new_from_descriptor(descriptor);
 
     if (!vipsSource) {
-        return NULL;
+        return (jlong) NULL;
     }
 
-    return newLongObject(env, (jlong) vipsSource);
+    return (jlong) vipsSource;
 }
 
 JNIEXPORT void JNICALL
-Java_xyz_quaver_minamo_LocalUriImageSource_closeSource(JNIEnv *env,
-                                                                               jobject this) {
+Java_xyz_quaver_minamo_LocalUriImageSource_closeSource(JNIEnv *env, jobject this) {
     jclass class = (*env)->GetObjectClass(env, this);
 
     jmethodID getVipsSource =
@@ -29,7 +28,7 @@ Java_xyz_quaver_minamo_LocalUriImageSource_closeSource(JNIEnv *env,
     g_object_unref(vipsSource);
 
     jfieldID vipsSourceField =
-        (*env)->GetFieldID(env, class, "_vipsSource", "Ljava/lang/Long;");
-    (*env)->SetObjectField(env, this, vipsSourceField, NULL);
+        (*env)->GetFieldID(env, class, "_vipsSource", "J");
+    (*env)->SetObjectField(env, this, vipsSourceField, 0L);
     return;
 }

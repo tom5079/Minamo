@@ -29,7 +29,8 @@ class MinamoImageImpl internal constructor(
         check(_vipsImage != 0L) { "failed to decode image" }
     }
 
-    external override fun image(rect: MinamoRect): MinamoNativeImage
+    external override fun decode(rect: MinamoRect): MinamoNativeImage
+    external override fun resize(scale: Double): MinamoImage
 
     private external fun hasAlpha(image: VipsImagePtr): Boolean
     private external fun getHeight(image: VipsImagePtr): Int
