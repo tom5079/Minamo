@@ -53,6 +53,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
     }
 
     VipsPel *pel = VIPS_REGION_ADDR(region, x, y);
+    size_t skip = VIPS_REGION_LSKIP(region);
     size_t bands = image->Bands;
 
 #ifdef __ANDROID__
@@ -75,6 +76,8 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
         size_t max = 0;
 
         for (size_t i = 0; i < height; i++) {
+            VipsPel* pelCopy = pel;
+
             for (size_t j = 0; j < width; j++) {
                 for (size_t k = 0; k < bands; k++) {
                     data[i * width * bands + j * bands + k] = pel[k];
@@ -82,6 +85,8 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
                 }
                 pel += bands;
             }
+
+            pel = pelCopy + skip;
         }
 
         (*env)->ReleaseByteArrayElements(env, dataArray, data, 0);
@@ -117,13 +122,13 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
         jobject colorSpace = (*env)->CallStaticObjectMethod(env, colorSpaceClass, getInstance, CS_sRGB);
 
         jclass colorModelClass = (*env)->FindClass(env, "Ljava/awt/image/ComponentColorModel;");
-        jint OPAQUE = (*env)->GetStaticIntField(env, colorModelClass, (*env)->GetStaticFieldID(env, colorModelClass, "OPAQUE", "I"));
+        jint transparency = (*env)->GetStaticIntField(env, colorModelClass, (*env)->GetStaticFieldID(env, colorModelClass, bands == 4 ? "TRANSLUCENT" : "OPAQUE", "I"));
 
         jclass dataBufferClass = (*env)->FindClass(env, "Ljava/awt/image/DataBuffer;");
         jint TYPE_BYTE = (*env)->GetStaticIntField(env, dataBufferClass, (*env)->GetStaticFieldID(env, dataBufferClass, "TYPE_BYTE", "I"));
 
         jmethodID init = (*env)->GetMethodID(env, colorModelClass, "<init>", "(Ljava/awt/color/ColorSpace;ZZII)V");
-        colorModel = (*env)->NewObject(env, colorModelClass, init, colorSpace, JNI_FALSE, JNI_FALSE, OPAQUE, TYPE_BYTE);
+        colorModel = (*env)->NewObject(env, colorModelClass, init, colorSpace, bands == 4, JNI_FALSE, transparency, TYPE_BYTE);
 
         (*env)->DeleteLocalRef(env, colorSpace);
     }
@@ -150,9 +155,77 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
     return minamoImage;
 }
 
+JNIEXPORT jbyteArray JNICALL
+Java_xyz_quaver_minamo_MinamoImageImpl_decodeRaw(JNIEnv *env, jobject this,
+    jobject rect
+) {
+    VipsImage* image = MinamoImage_getVipsImage(env, this);
+
+    size_t x, y, width, height;
+    {
+        jclass rectClass = (*env)->GetObjectClass(env, rect);
+
+        jfieldID xField = (*env)->GetFieldID(env, rectClass, "x", "I");
+        jfieldID yField = (*env)->GetFieldID(env, rectClass, "y", "I");
+        jfieldID widthField = (*env)->GetFieldID(env, rectClass, "width", "I");
+        jfieldID heightField = (*env)->GetFieldID(env, rectClass, "height", "I");
+
+        x = (*env)->GetIntField(env, rect, xField);
+        y = (*env)->GetIntField(env, rect, yField);
+        width = (*env)->GetIntField(env, rect, widthField);
+        height = (*env)->GetIntField(env, rect, heightField);
+    }
+
+    VipsRect imageRect = { 0, 0, image->Xsize, image->Ysize };
+    VipsRect regionRect = { x, y, width, height };
+
+    if (!vips_rect_includesrect(&imageRect, &regionRect)) {
+        return NULL;
+    }
+
+    if (image->BandFmt != VIPS_FORMAT_UCHAR) {
+        return NULL;
+    }
+
+    VipsRegion *region = vips_region_new(image);
+
+    if (vips_region_prepare(region, &regionRect)) {
+        g_object_unref(region);
+        return NULL;
+    }
+
+    VipsPel *pel = VIPS_REGION_ADDR(region, x, y);
+    size_t skip = VIPS_REGION_LSKIP(region);
+    size_t bands = image->Bands;
+
+    jbyteArray dataArray;
+    {
+        dataArray = (jbyteArray)(*env)->NewByteArray(env, width * height * bands);
+
+        jbyte* data = (*env)->GetByteArrayElements(env, dataArray, NULL);
+
+        for (size_t i = 0; i < height; i++) {
+            VipsPel* pelCopy = pel;
+
+            for (size_t j = 0; j < width; j++) {
+                for (size_t k = 0; k < bands; k++) {
+                    data[(i * width + j) * bands + k] = pel[k];
+                }
+                pel += bands;
+            }
+
+            pel = pelCopy + skip;
+        }
+
+        (*env)->ReleaseByteArrayElements(env, dataArray, data, 0);
+    }
+
+    return dataArray;
+}
+
 JNIEXPORT jobject JNICALL
 Java_xyz_quaver_minamo_MinamoImageImpl_resize(JNIEnv *env, jobject this,
-    jdouble scale
+    jfloat scale
 ) {
     VipsImage* image = MinamoImage_getVipsImage(env, this);
 
