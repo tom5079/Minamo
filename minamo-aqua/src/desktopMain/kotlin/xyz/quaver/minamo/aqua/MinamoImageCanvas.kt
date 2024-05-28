@@ -5,8 +5,13 @@ import java.awt.*
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import java.awt.event.MouseWheelListener
+import java.awt.image.BufferedImage
+import java.awt.image.DataBufferInt
+import java.awt.image.DirectColorModel
+import java.awt.image.Raster
 import javax.swing.JPanel
 import javax.swing.event.MouseInputListener
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.log2
 import kotlin.math.roundToInt
@@ -74,7 +79,6 @@ class MinamoImageCanvas : JPanel(), MouseInputListener, MouseWheelListener {
                 this.scale = scale
             }
         }
-
         Bounds.FORCE_OVERLAP(offset, scale, imageSize ?: MinamoSize.Zero, size.toMinamoSize()).let { (offset, scale) ->
             this.offset = offset
             this.scale = scale
@@ -83,97 +87,88 @@ class MinamoImageCanvas : JPanel(), MouseInputListener, MouseWheelListener {
         g.color = Color.RED
         g2d.setRenderingHints(mapOf(RenderingHints.KEY_INTERPOLATION to RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR))
 
-        val offsetSnapshot = offset
-        val scaleSnapshot = scale
+        var loadAcc = 0
+        var actualAcc = 0
+        var drawAcc = 0
+        var lossDraw = 0
+        var count = 0
+
+        val imageRect = MinamoRect(
+            (-offset.x / scale).roundToInt(),
+            (-offset.y / scale).roundToInt(),
+            floor(width / scale).toInt(),
+            floor(height / scale).toInt()
+        )
+
+        println("imageRect: $imageRect")
 
         var timer = System.currentTimeMillis()
 
-        tileCache.tileCount.let { (tileCountX, tileCountY) ->
-            var loadAcc = 0
-            var actualAcc = 0
-            var drawAcc = 0
-            var lossDraw = 0
-            var count = 0
+        val image = tileCache.image?.resize(1 / (1 shl tileCache.level).toFloat()).use {
+            it?.decode(imageRect.scale(1 / (1 shl tileCache.level).toFloat(), origin = MinamoIntOffset.Zero))
+        }
 
-            val imageRect = MinamoRect(
-                (-offset.x / scale).roundToInt(),
-                (-offset.y / scale).roundToInt(),
-                floor(width / scale).toInt(),
-                floor(height / scale).toInt()
-            )
+        loadAcc = (System.currentTimeMillis() - timer).toInt()
+        timer = System.currentTimeMillis()
 
-            println("imageRect: $imageRect")
+        println("decoded image size: ${image?.image?.getWidth(null)} x ${image?.image?.getHeight(null)}")
 
-            var timer = System.currentTimeMillis()
+        if (image != null) {
+            g.drawImage(image.image, 0, 0, null)
+        }
 
-            val image = tileCache.image?.resize(1 / (1 shl tileCache.level).toFloat()).use {
-                it?.decode(imageRect.scale(1 / (1 shl tileCache.level).toFloat(), origin = MinamoIntOffset.Zero))
-            }
-            loadAcc = (System.currentTimeMillis() - timer).toInt()
-            timer = System.currentTimeMillis()
+        drawAcc = (System.currentTimeMillis() - timer).toInt()
 
-            println("decoded image size: ${image?.image?.getWidth(null)} x ${image?.image?.getHeight(null)}")
-
-            if (image != null) {
-                g.drawImage(image.image, 0, 0, width, height, null)
-            }
-
-            drawAcc = (System.currentTimeMillis() - timer).toInt()
-
-//            tileCache.tiles.forEach { tile ->
-//                if (offsetSnapshot != offset || scaleSnapshot != scale) {
-//                    println("!!!Aborted rendering due to scale change")
-//                    return
-//                }
+//        var timer = System.currentTimeMillis()
 //
-//                val tileRect = MinamoRect(
-//                    offset.x + (tile.region.x * scale).roundToInt(),
-//                    offset.y + (tile.region.y * scale).roundToInt(),
-//                    ceil(tile.region.width * scale).toInt(),
-//                    ceil(tile.region.height * scale).roundToInt()
-//                )
+//        tileCache.tiles.forEach { tile ->
+//            val tileRect = MinamoRect(
+//                offset.x + (tile.region.x * scale).roundToInt(),
+//                offset.y + (tile.region.y * scale).roundToInt(),
+//                ceil(tile.region.width * scale).toInt(),
+//                ceil(tile.region.height * scale).roundToInt()
+//            )
 //
-//                val loadTimer = System.currentTimeMillis()
+//            val loadTimer = System.currentTimeMillis()
 //
-//                var flag = tile.tile == null
+//            var flag = tile.tile == null
 //
-//                if (tileRect overlaps MinamoRect(MinamoIntOffset.Zero, size.toMinamoSize())) {
-//                    tile.load()
-//                    count += 1
-//                } else {
-//                    flag = false
-//                    tile.unload()
-//                }
-//
-//                if (flag) actualAcc += (System.currentTimeMillis() - loadTimer).toInt()
-//
-//                loadAcc += (System.currentTimeMillis() - loadTimer).toInt()
-//
-//                val drawTimer = System.currentTimeMillis()
-//
-//                g.drawImage(
-//                    tile.tile?.image,
-//                    offset.x + (tile.region.x * scale).roundToInt(),
-//                    offset.y + (tile.region.y * scale).roundToInt(),
-//                    ceil(tile.region.width * scale).toInt(),
-//                    ceil(tile.region.height * scale).roundToInt(),
-//                    null
-//                )
-//
-//                g.drawRect(
-//                    offset.x + (tile.region.x * scale).roundToInt(),
-//                    offset.y + (tile.region.y * scale).roundToInt(),
-//                    ceil(tile.region.width * scale).toInt(),
-//                    ceil(tile.region.height * scale).roundToInt()
-//                )
-//
-//                drawAcc += (System.currentTimeMillis() - drawTimer).toInt()
-//                lossDraw += if (tile.tile == null) (System.currentTimeMillis() - drawTimer).toInt() else 0
+//            if (tileRect overlaps MinamoRect(MinamoIntOffset.Zero, size.toMinamoSize())) {
+//                tile.load()
+//                count += 1
+//            } else {
+//                flag = false
+//                tile.unload()
 //            }
-
-            if (loadAcc > 50 || drawAcc > 50) {
-                println("!!!Loading $loadAcc ms actual $actualAcc Drawing $drawAcc ms Loss $lossDraw ms Count $count average ${loadAcc / count.toFloat()}ms")
-            }
+//
+//            if (flag) actualAcc += (System.currentTimeMillis() - loadTimer).toInt()
+//
+//            loadAcc += (System.currentTimeMillis() - loadTimer).toInt()
+//
+//            val drawTimer = System.currentTimeMillis()
+//
+//            g.drawImage(
+//                tile.tile?.image,
+//                offset.x + (tile.region.x * scale).roundToInt(),
+//                offset.y + (tile.region.y * scale).roundToInt(),
+//                ceil(tile.region.width * scale).toInt(),
+//                ceil(tile.region.height * scale).roundToInt(),
+//                null
+//            )
+//
+//            g.drawRect(
+//                offset.x + (tile.region.x * scale).roundToInt(),
+//                offset.y + (tile.region.y * scale).roundToInt(),
+//                ceil(tile.region.width * scale).toInt(),
+//                ceil(tile.region.height * scale).roundToInt()
+//            )
+//
+//            drawAcc += (System.currentTimeMillis() - drawTimer).toInt()
+//            lossDraw += if (tile.tile == null) (System.currentTimeMillis() - drawTimer).toInt() else 0
+//        }
+//
+        if (loadAcc > 50 || drawAcc > 50) {
+            println("!!!Loading $loadAcc ms actual $actualAcc Drawing $drawAcc ms Loss $lossDraw ms Count $count average ${loadAcc / count.toFloat()}ms")
         }
 
         println("Rendering took ${System.currentTimeMillis() - timer}ms")

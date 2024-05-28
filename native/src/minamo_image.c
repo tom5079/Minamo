@@ -62,26 +62,25 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
 #else
     jobject dataBuffer;
     {
-        jclass dataBufferClass = (*env)->FindClass(env, "Ljava/awt/image/DataBufferByte;");
+        jclass dataBufferClass = (*env)->FindClass(env, "Ljava/awt/image/DataBufferInt;");
         jmethodID dataBufferConstructor = (*env)->GetMethodID(env, dataBufferClass, "<init>", "(II)V");
-        dataBuffer = (*env)->NewObject(env, dataBufferClass, dataBufferConstructor, width * height * bands, 1);
+        dataBuffer = (*env)->NewObject(env, dataBufferClass, dataBufferConstructor, width * height, 1);
 
-        jmethodID getData = (*env)->GetMethodID(env, dataBufferClass, "getData", "()[B");
-        jbyteArray dataArray = (jbyteArray)(*env)->CallObjectMethod(env, dataBuffer, getData);
+        jmethodID getData = (*env)->GetMethodID(env, dataBufferClass, "getData", "()[I");
+        jintArray dataArray = (jintArray)(*env)->CallObjectMethod(env, dataBuffer, getData);
 
-        jbyte* data = (*env)->GetByteArrayElements(env, dataArray, NULL);
-
-        jsize size = (*env)->GetArrayLength(env, dataArray);
-
-        size_t max = 0;
+        jint* data = (*env)->GetIntArrayElements(env, dataArray, NULL);
 
         for (size_t i = 0; i < height; i++) {
             VipsPel* pelCopy = pel;
 
             for (size_t j = 0; j < width; j++) {
-                for (size_t k = 0; k < bands; k++) {
-                    data[i * width * bands + j * bands + k] = pel[k];
-                    max = i * width * bands + j * bands + k;
+                if (bands == 1) {
+                    data[i * width + j] = (pel[0] << 16) | (pel[0] << 8) | pel[0];
+                } else if (bands == 3) {
+                    data[i * width + j] = (pel[0] << 16) | (pel[1] << 8) | pel[2];
+                } else if (bands == 4) {
+                    data[i * width + j] = (pel[0] << 16) | (pel[1] << 8) | pel[2];
                 }
                 pel += bands;
             }
@@ -89,48 +88,37 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
             pel = pelCopy + skip;
         }
 
-        (*env)->ReleaseByteArrayElements(env, dataArray, data, 0);
+        (*env)->ReleaseIntArrayElements(env, dataArray, data, 0);
     }
     g_object_unref(region);
 
     jobject raster;
     {
-        jintArray bandOffsets = (*env)->NewIntArray(env, bands);
-        jint* bandOffsetsArray = (*env)->GetIntArrayElements(env, bandOffsets, NULL);
-        for (size_t i = 0; i < bands; i++) {
-            bandOffsetsArray[i] = i;
-        }
-        (*env)->ReleaseIntArrayElements(env, bandOffsets, bandOffsetsArray, 0);
+        jintArray bandMasks = (*env)->NewIntArray(env, 3);
+        jint* bandMasksArray = (*env)->GetIntArrayElements(env, bandMasks, NULL);
+        bandMasksArray[0] = 0xFF0000;
+        bandMasksArray[1] = 0xFF00;
+        bandMasksArray[2] = 0xFF;
+        (*env)->ReleaseIntArrayElements(env, bandMasks, bandMasksArray, 0);
 
         jclass pointClass = (*env)->FindClass(env, "Ljava/awt/Point;");
         jmethodID pointConstructor = (*env)->GetMethodID(env, pointClass, "<init>", "(II)V");
         jobject point = (*env)->NewObject(env, pointClass, pointConstructor, 0, 0);
 
         jclass rasterClass = (*env)->FindClass(env, "Ljava/awt/image/Raster;");
-        jmethodID createInterleavedRaster = (*env)->GetStaticMethodID(env, rasterClass, "createInterleavedRaster", "(Ljava/awt/image/DataBuffer;IIII[ILjava/awt/Point;)Ljava/awt/image/WritableRaster;");
-        raster = (*env)->CallStaticObjectMethod(env, rasterClass, createInterleavedRaster, dataBuffer, width, height, width * bands, bands, bandOffsets, point);
+        jmethodID createPackedRaster = (*env)->GetStaticMethodID(env, rasterClass, "createPackedRaster", "(Ljava/awt/image/DataBuffer;III[ILjava/awt/Point;)Ljava/awt/image/WritableRaster;");
+        raster = (*env)->CallStaticObjectMethod(env, rasterClass, createPackedRaster, dataBuffer, width, height, width, bandMasks, point);
 
-        (*env)->DeleteLocalRef(env, bandOffsets);
+        (*env)->DeleteLocalRef(env, bandMasks);
         (*env)->DeleteLocalRef(env, point);
     }
 
     jobject colorModel;
     {
-        jclass colorSpaceClass = (*env)->FindClass(env, "Ljava/awt/color/ColorSpace;");
-        jint CS_sRGB = (*env)->GetStaticIntField(env, colorSpaceClass, (*env)->GetStaticFieldID(env, colorSpaceClass, "CS_sRGB", "I"));
-        jmethodID getInstance = (*env)->GetStaticMethodID(env, colorSpaceClass, "getInstance", "(I)Ljava/awt/color/ColorSpace;");
-        jobject colorSpace = (*env)->CallStaticObjectMethod(env, colorSpaceClass, getInstance, CS_sRGB);
+        jclass colorModelClass = (*env)->FindClass(env, "Ljava/awt/image/DirectColorModel;");
 
-        jclass colorModelClass = (*env)->FindClass(env, "Ljava/awt/image/ComponentColorModel;");
-        jint transparency = (*env)->GetStaticIntField(env, colorModelClass, (*env)->GetStaticFieldID(env, colorModelClass, bands == 4 ? "TRANSLUCENT" : "OPAQUE", "I"));
-
-        jclass dataBufferClass = (*env)->FindClass(env, "Ljava/awt/image/DataBuffer;");
-        jint TYPE_BYTE = (*env)->GetStaticIntField(env, dataBufferClass, (*env)->GetStaticFieldID(env, dataBufferClass, "TYPE_BYTE", "I"));
-
-        jmethodID init = (*env)->GetMethodID(env, colorModelClass, "<init>", "(Ljava/awt/color/ColorSpace;ZZII)V");
-        colorModel = (*env)->NewObject(env, colorModelClass, init, colorSpace, bands == 4, JNI_FALSE, transparency, TYPE_BYTE);
-
-        (*env)->DeleteLocalRef(env, colorSpace);
+        jmethodID init = (*env)->GetMethodID(env, colorModelClass, "<init>", "(IIII)V");
+        colorModel = (*env)->NewObject(env, colorModelClass, init, 24, 0xFF0000, 0xFF00, 0xFF);
     }
 
     jobject bufferedImage;

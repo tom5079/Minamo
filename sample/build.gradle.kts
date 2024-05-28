@@ -78,6 +78,7 @@ val libraryPath = rootDir.resolve("native/build/fakeroot/lib").absolutePath
 compose.desktop {
     application {
         jvmArgs.add("-Djava.library.path=$libraryPath")
+        jvmArgs.add("-Dsun.java2d.opengl=true")
         mainClass = "MainKt"
 
         nativeDistributions {
