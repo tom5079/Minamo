@@ -13,7 +13,7 @@ include("cmake/heif.cmake")
 include("cmake/jxl.cmake")
 include("cmake/fftw.cmake")
 include("cmake/exif.cmake")
-include("cmake/mozjpeg.cmake")
+include("cmake/jpeg-turbo.cmake")
 include("cmake/webp.cmake")
 include("cmake/tiff.cmake")
 
@@ -24,7 +24,7 @@ endif()
 ExternalProject_Add(ep_vips
     GIT_REPOSITORY      https://github.com/libvips/libvips.git
     GIT_TAG             v8.15.2
-    DEPENDS ep_glib ep_expat ep_spng ep_highway ep_heif ep_jxl ep_fftw ep_exif ep_mozjpeg ep_webp ep_tiff
+    DEPENDS ep_glib ep_expat ep_spng ep_highway ep_heif ep_jxl ep_fftw ep_exif ep_jpeg-turbo ep_webp ep_tiff
     CONFIGURE_COMMAND
         ${Meson_EXECUTABLE} setup ${MESON_CROSS_FILE_ARG} --default-library shared --prefix=<INSTALL_DIR>
             -Ddeprecated=false

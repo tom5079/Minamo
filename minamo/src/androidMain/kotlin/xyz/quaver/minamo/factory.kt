@@ -1,9 +1,9 @@
 package xyz.quaver.minamo
 
-import android.content.Context
+import android.content.ContextWrapper
 import android.net.Uri
 
-fun loadImageFromLocalUri(context: Context, uri: Uri): MinamoImage =
-    LocalUriImageSource(context, uri).use {
+fun ContextWrapper.loadImageFromLocalUri(uri: Uri): MinamoImage =
+    LocalUriImageSource(this, uri).use {
         MinamoImageImpl(it)
     }

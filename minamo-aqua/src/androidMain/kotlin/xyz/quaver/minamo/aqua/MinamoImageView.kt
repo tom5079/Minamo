@@ -1,11 +1,13 @@
 package xyz.quaver.minamo.aqua
 
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.SurfaceView
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import xyz.quaver.minamo.MinamoImage
 
 class MinamoImageView(
@@ -18,20 +20,40 @@ class MinamoImageView(
     companion object {
         @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
         private val coroutineContext = newSingleThreadContext("minamo_aqua_render_thread")
+        private val mutex = Mutex()
     }
 
-    private val holder = getHolder()
+    private fun repaint() = CoroutineScope(coroutineContext).launch {
+        mutex.withLock {
+            val canvas = run {
+                var canvas = holder.lockCanvas()
 
-    init {
-        System.loadLibrary("minamo-aqua")
+                while (canvas == null) {
+                    delay(100)
+                    canvas = holder.lockCanvas()
+                }
+
+                canvas
+            }
+
+            val paint = Paint().apply {
+                isAntiAlias = true
+                color = Color.RED
+                style = Paint.Style.STROKE
+            }
+
+            canvas.drawRect(0f, 0f, 100f, 100f, paint)
+
+            holder.unlockCanvasAndPost(canvas)
+        }
     }
 
     fun setImage(image: MinamoImage) {
-
+        repaint()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
+        repaint()
     }
 
 }

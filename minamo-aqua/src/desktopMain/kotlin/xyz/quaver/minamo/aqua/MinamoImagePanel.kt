@@ -14,7 +14,7 @@ import kotlin.math.roundToInt
 
 private fun Dimension.toMinamoSize() = MinamoSize(width, height)
 
-class MinamoImageCanvas : JPanel(), MouseInputListener, MouseWheelListener {
+class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
     private val tileCache = TileCache().apply {
         onTileLoaded = { _, _ -> repaint() }
     }

@@ -50,14 +50,16 @@ CPU_FAMILY=$(echo $ARCH_LOOKUP | jq -r .${1}.cpu_family)
 SYSROOT="$(readlink -f .)/build-ndk-${1}/fakeroot"
 
 export TARGET=$(echo $ARCH_LOOKUP | jq -r .${1}.target)
-export API=21
+export ANDROID_PLATFORM=21
 export AR=$TOOLCHAIN/bin/llvm-ar
-export CC=$TOOLCHAIN/bin/$TARGET$API-clang
+export CC=$TOOLCHAIN/bin/$TARGET$ANDROID_PLATFORM-clang
 export AS=$CC
-export CXX=$TOOLCHAIN/bin/$TARGET$API-clang++
+export CXX=$TOOLCHAIN/bin/$TARGET$ANDROID_PLATFORM-clang++
 export LD=$TOOLCHAIN/bin/ld
 export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
 export STRIP=$TOOLCHAIN/bin/llvm-strip
+
+echo $CC
 
 cat << EOF > "cmake/cross-file-${1}.txt"
 [host_machine]
@@ -73,8 +75,8 @@ c_link_args = ['-L$SYSROOT/lib']
 cpp_link_args = ['-L$SYSROOT/lib']
 
 [binaries]
-c = '$TOOLCHAIN/bin/$TARGET$API-clang'
-cpp = '$TOOLCHAIN/bin/$TARGET$API-clang++'
+c = '$TOOLCHAIN/bin/$TARGET$ANDROID_PLATFORM-clang'
+cpp = '$TOOLCHAIN/bin/$TARGET$ANDROID_PLATFORM-clang++'
 ar = '$TOOLCHAIN/bin/llvm-ar'
 strip = '$TOOLCHAIN/bin/llvm-strip'
 ranlib = '$TOOLCHAIN/bin/llvm-ranlib'
@@ -101,7 +103,7 @@ cd build-ndk-${1}
 # test -h $SYSROOT/lib/libz.so
 # echo $?
 
-[[ ! -h $SYSROOT/lib/libz.so ]] && ln -s $TOOLCHAIN/sysroot/usr/lib/$TARGET/$API/libz.so $SYSROOT/lib/libz.so
+[[ ! -h $SYSROOT/lib/libz.so ]] && ln -s $TOOLCHAIN/sysroot/usr/lib/$TARGET/$ANDROID_PLATFORM/libz.so $SYSROOT/lib/libz.so
 [[ ! -h $SYSROOT/include/zlib.h ]] && ln -s $TOOLCHAIN/sysroot/usr/include/zlib.h $SYSROOT/include/zlib.h
 
 cat << EOF > "$PKG_CONFIG_LIBDIR/zlib.pc"

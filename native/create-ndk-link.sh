@@ -14,6 +14,7 @@ LIBRARIES=(
     "libgobject-2.0.so"
     "libgthread-2.0.so"
     "libexpat.so"
+    "libexif.so"
     "libjpeg.so"
     "libtiff.so"
     "libspng.so"
@@ -41,7 +42,9 @@ working_directory=$(pwd)
 
 for arch in "${!ARCHS[@]}"; do
     source_folder=$(readlink -f build-ndk-$arch/fakeroot/lib)
-    target_folder=$(readlink -f ../library/src/androidMain/jniLibs)/${ARCHS[$arch]}
+    target_folder=$(readlink -f ../minamo/src/androidMain/jniLibs)/${ARCHS[$arch]}
+
+    echo $target_folder
 
     [ -d $target_folder ] || mkdir $target_folder
 

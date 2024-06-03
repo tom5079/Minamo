@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <stdint.h>
 #include <vips/vips.h>
+#include <turbojpeg.h>
 
 #include "arch.h"
 
@@ -11,7 +12,7 @@ typedef struct _MinamoSinkData {
 
 static void MinamoSinkData_dispose_cb(VipsObject *object, MinamoSinkData* data) {
     JNIEnv *env;
-    (*data->jvm)->AttachCurrentThread(data->jvm, (void**) &env, NULL);
+    (*data->jvm)->AttachCurrentThread(data->jvm, JNIENV_PTR(&env), NULL);
 
     (*env)->DeleteGlobalRef(env, data->notify);
 
@@ -202,7 +203,7 @@ static void MinamoImage_sink_notify(VipsImage* image, VipsRect* rect, void* data
     MinamoSinkData* sinkData = (MinamoSinkData*) data;
 
     JNIEnv* env;
-    (*sinkData->jvm)->AttachCurrentThread(sinkData->jvm, (void**) &env, NULL);
+    (*sinkData->jvm)->AttachCurrentThread(sinkData->jvm, JNIENV_PTR(&env), NULL);
 
     jclass minamoImageClass = (*env)->FindClass(env, "Lxyz/quaver/minamo/MinamoImageImpl;");
     jmethodID minamoImageConstructor = (*env)->GetMethodID(env, minamoImageClass, "<init>", "(J)V");

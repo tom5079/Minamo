@@ -1,23 +1,21 @@
 package xyz.quaver.minamo
 
-import android.content.Context
 import android.content.ContextWrapper
 import android.net.Uri
 
 class LocalUriImageSource(
-    context: Context,
+    context: ContextWrapper,
     uri: Uri
-) : ImageSource, ContextWrapper(context) {
+) : ImageSource {
     private var _vipsSource: VipsSourcePtr = 0L
-
     override val vipsSource: VipsSourcePtr
         get() {
-            check (_vipsSource != 0L) { "tried to access closed VipsSource" }
+            check(_vipsSource != 0L) { "tried to access closed VipsSource" }
             return _vipsSource
         }
 
     private val descriptor = runCatching {
-        contentResolver.openFileDescriptor(uri, "r")
+        context.contentResolver.openFileDescriptor(uri, "r")
     }.getOrNull() ?: error("failed to open image $uri")
 
     init {
@@ -27,9 +25,5 @@ class LocalUriImageSource(
     }
 
     private external fun load(descriptor: Int): VipsSourcePtr
-    private external fun closeSource()
-
-    override fun close() {
-        closeSource()
-    }
+    external override fun close()
 }

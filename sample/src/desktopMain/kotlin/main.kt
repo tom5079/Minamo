@@ -4,7 +4,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.SwingPanel
 import androidx.compose.ui.window.singleWindowApplication
 import xyz.quaver.minamo.MinamoImage
-import xyz.quaver.minamo.aqua.MinamoImageCanvas
+import xyz.quaver.minamo.aqua.MinamoImagePanel
 import xyz.quaver.minamo.loadImageFromFile
 
 fun main() = singleWindowApplication {
@@ -22,7 +22,7 @@ fun main() = singleWindowApplication {
     SwingPanel(
         modifier = Modifier.fillMaxSize(),
         factory = {
-            MinamoImageCanvas().apply {
+            MinamoImagePanel().apply {
                 setImage(image)
             }
         },
