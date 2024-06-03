@@ -12,7 +12,7 @@ fun main() = singleWindowApplication {
 
     DisposableEffect(Unit) {
         image =
-            loadImageFromFile("/home/tom5079/Downloads/_Keep_FDA_Off_The_Farm__(FDA_140)_(8205957369).jpg")
+            loadImageFromFile("/home/tom5079/Downloads/53658848485_f9517d3193_o.jpg")
 
         onDispose {
             image?.close()

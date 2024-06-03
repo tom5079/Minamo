@@ -5,13 +5,18 @@ import kotlin.math.min
 
 class Tile(
     val image: MinamoImage,
+    val mask: MinamoImage?,
     val region: MinamoRect,
     val level: Int,
     var tile: MinamoNativeImage? = null
 ) {
     fun load() {
         if (tile != null) return
-        tile = image.decode(region.scale(1 / (1 shl level).toFloat(), origin = MinamoIntOffset.Zero))
+        val decodeRegion = region.scale(1 / (1 shl level).toFloat(), origin = MinamoIntOffset.Zero)
+        val valid = mask?.decode(decodeRegion)?.pixelAt(0, 0)?.and(0xff) != 0
+        tile = image.decode(decodeRegion).let {
+            if (valid) it else null
+        }
     }
 
     fun unload() {
@@ -34,14 +39,40 @@ class TileCache {
             if (field == sanitized) return
             field = sanitized
 
-            resizedImage?.close()
-            resizedImage = if (level > 0) image?.resize(1 / (1 shl value).toFloat()) else null
+            cached?.close()
+            mask?.close()
+
+            cached = null
+            mask = null
+
+            val image = image ?: return
+
+            if (level > 0) {
+                image.resize(1 / (1 shl level).toFloat()).use {
+                    val (cached, mask) = it.sink(MinamoSize(256, 256), 256, 0) { image, rect ->
+                        onTileLoaded?.invoke(image, rect)
+                    }
+
+                    this.cached = cached
+                    this.mask = mask
+                }
+            } else {
+                val (cached, mask) = image.sink(MinamoSize(256, 256), 256, 0) { image, rect ->
+                    onTileLoaded?.invoke(image, rect)
+                }
+
+                this.cached = cached
+                this.mask = mask
+            }
             populateTiles()
         }
 
-    private var resizedImage: MinamoImage? = null
+    private var cached: MinamoImage? = null
+    private var mask: MinamoImage? = null
 
     private val tileSize = 8
+
+    var onTileLoaded: ((MinamoImage, MinamoRect) -> Unit)? = null
 
     val tiles = mutableListOf<Tile>()
 
@@ -71,7 +102,7 @@ class TileCache {
                     min(1 shl (level + tileSize), image.height - (y shl (level + tileSize)))
                 )
 
-                tiles.add(Tile(resizedImage ?: image, imageRegion, level, null))
+                tiles.add(Tile(cached ?: image, mask, imageRegion, level, null))
             }
         }
     }

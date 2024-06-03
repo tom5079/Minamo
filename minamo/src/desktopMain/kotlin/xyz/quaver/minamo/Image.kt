@@ -1,10 +1,18 @@
 package xyz.quaver.minamo
 
 import java.awt.Image
+import java.awt.image.BufferedImage
 
 actual class MinamoNativeImage(
     val image: Image
 )
+
+actual fun MinamoNativeImage.pixelAt(x: Int, y: Int): Int {
+    return when (image) {
+        is BufferedImage -> image.getRGB(x, y)
+        else -> throw UnsupportedOperationException("unsupported image type: ${image::class.simpleName}")
+    }
+}
 
 class MinamoImageImpl internal constructor(
     private var _vipsImage: VipsImagePtr = 0L
@@ -33,8 +41,14 @@ class MinamoImageImpl internal constructor(
     }
 
     external override fun decode(rect: MinamoRect): MinamoNativeImage?
-    external override fun decodeRaw(rect: MinamoRect): ByteArray?
     external override fun resize(scale: Float): MinamoImage
+
+    external override fun sink(
+        tileSize: MinamoSize,
+        maxTiles: Int,
+        priority: Int,
+        notify: (MinamoImage, MinamoRect) -> Unit
+    ): Pair<MinamoImage, MinamoImage>
 
     private external fun hasAlpha(image: VipsImagePtr): Boolean
     private external fun getHeight(image: VipsImagePtr): Int
@@ -42,4 +56,11 @@ class MinamoImageImpl internal constructor(
 
     private external fun load(image: VipsImagePtr): VipsImagePtr
     external override fun close()
+    override fun hashCode(): Int {
+        return _vipsImage.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return _vipsImage == (other as? MinamoImageImpl)?._vipsImage
+    }
 }

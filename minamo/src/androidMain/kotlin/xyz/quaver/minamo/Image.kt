@@ -6,6 +6,10 @@ actual class MinamoNativeImage(
     val bitmap: Bitmap
 )
 
+actual fun MinamoNativeImage.pixelAt(x: Int, y: Int): Int {
+    return bitmap.getPixel(x, y)
+}
+
 class MinamoImageImpl internal constructor(
     source: ImageSource
 ) : VipsImage {
@@ -30,8 +34,14 @@ class MinamoImageImpl internal constructor(
     }
 
     external override fun decode(rect: MinamoRect): MinamoNativeImage?
-    external override fun decodeRaw(rect: MinamoRect): ByteArray?
     external override fun resize(scale: Float): MinamoImage
+
+    external override fun sink(
+        tileSize: MinamoSize,
+        maxTiles: Int,
+        priority: Int,
+        notify: (MinamoImage, MinamoRect) -> Unit
+    ): Pair<MinamoImage, MinamoImage>
 
     private external fun hasAlpha(image: VipsImagePtr): Boolean
     private external fun getHeight(image: VipsImagePtr): Int
@@ -39,4 +49,12 @@ class MinamoImageImpl internal constructor(
 
     private external fun load(image: VipsImagePtr): VipsImagePtr
     external override fun close()
+
+    override fun hashCode(): Int {
+        return _vipsImage.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return _vipsImage == (other as? MinamoImageImpl)?._vipsImage
+    }
 }

@@ -134,3 +134,5 @@ cmake --build .
 for lib in fakeroot/lib/*so; do
     [[ -f $lib && ! -h $lib ]] && $TOOLCHAIN/bin/llvm-strip $lib
 done
+
+echo

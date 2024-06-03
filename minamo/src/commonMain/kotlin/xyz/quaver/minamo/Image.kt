@@ -1,3 +1,5 @@
+@file:JvmName("CommonMinamoImage")
+
 package xyz.quaver.minamo
 
 import kotlin.math.roundToInt
@@ -6,6 +8,8 @@ typealias VipsImagePtr = Long
 typealias VipsRegionPtr = Long
 
 expect class MinamoNativeImage
+
+expect fun MinamoNativeImage.pixelAt(x: Int, y: Int): Int
 
 data class MinamoSize(
     val width: Int,
@@ -84,8 +88,14 @@ interface MinamoImage : AutoCloseable {
         get() = MinamoSize(width, height)
 
     fun decode(rect: MinamoRect = MinamoRect(0, 0, width, height)): MinamoNativeImage?
-    fun decodeRaw(rect: MinamoRect = MinamoRect(0, 0, width, height)): ByteArray?
     fun resize(scale: Float): MinamoImage
+
+    fun sink(
+        tileSize: MinamoSize,
+        maxTiles: Int,
+        priority: Int,
+        notify: (MinamoImage, MinamoRect) -> Unit
+    ): Pair<MinamoImage, MinamoImage>
 }
 
 internal interface VipsImage : MinamoImage {
