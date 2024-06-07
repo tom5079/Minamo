@@ -89,6 +89,7 @@ interface MinamoImage : AutoCloseable {
 
     fun decode(rect: MinamoRect = MinamoRect(0, 0, width, height)): MinamoNativeImage?
     fun resize(scale: Float): MinamoImage
+    fun subsample(xFactor: Int, yFactor: Int = xFactor): MinamoImage
 
     fun sink(
         tileSize: MinamoSize,

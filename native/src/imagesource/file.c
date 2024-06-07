@@ -33,6 +33,6 @@ Java_xyz_quaver_minamo_FileImageSource_close(JNIEnv *env,
 
     jfieldID vipsSourceField =
         (*env)->GetFieldID(env, class, "_vipsSource", "J");
-    (*env)->SetObjectField(env, this, vipsSourceField, 0L);
+    (*env)->SetLongField(env, this, vipsSourceField, 0L);
     return;
 }

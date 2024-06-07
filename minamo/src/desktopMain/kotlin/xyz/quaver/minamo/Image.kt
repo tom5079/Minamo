@@ -42,6 +42,7 @@ class MinamoImageImpl internal constructor(
 
     external override fun decode(rect: MinamoRect): MinamoNativeImage?
     external override fun resize(scale: Float): MinamoImage
+    external override fun subsample(xFactor: Int, yFactor: Int): MinamoImage
 
     external override fun sink(
         tileSize: MinamoSize,

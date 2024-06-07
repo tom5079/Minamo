@@ -11,9 +11,8 @@ actual fun MinamoNativeImage.pixelAt(x: Int, y: Int): Int {
 }
 
 class MinamoImageImpl internal constructor(
-    source: ImageSource
+    private var _vipsImage: VipsImagePtr = 0L
 ) : VipsImage {
-    private var _vipsImage: VipsImagePtr
     override val vipsImage: VipsImagePtr
         get() {
             check(_vipsImage != 0L) { "tried to access closed VipsImage" }
@@ -27,14 +26,19 @@ class MinamoImageImpl internal constructor(
     override val width: Int
         get() = getWidth(vipsImage)
 
+    internal constructor(source: ImageSource) : this() {
+        val vipsImage = load(source.vipsSource)
+        check(vipsImage != 0L) { "failed to decode image" }
+        _vipsImage = vipsImage
+    }
+
     init {
         System.loadLibrary("minamo")
-        _vipsImage = load(source.vipsSource)
-        check(_vipsImage != 0L) { "failed to decode image" }
     }
 
     external override fun decode(rect: MinamoRect): MinamoNativeImage?
     external override fun resize(scale: Float): MinamoImage
+    external override fun subsample(xFactor: Int, yFactor: Int): MinamoImage
 
     external override fun sink(
         tileSize: MinamoSize,

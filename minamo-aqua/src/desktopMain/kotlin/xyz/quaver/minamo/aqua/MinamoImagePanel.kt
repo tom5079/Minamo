@@ -37,28 +37,14 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
         addMouseWheelListener(this)
     }
 
-    fun setImage(image: MinamoImage?, scaleType: ScaleType = ScaleTypes.CENTER_INSIDE) {
-        tileCache.image = image ?: return
-        this.scaleType = scaleType
-
-        if (width == 0 || height == 0) {
-            this.scale = -1.0f
-            return
-        }
-
-        scaleType(size.toMinamoSize(), image.size).let { (offset, scale) ->
-            this.offset = offset
-            this.scale = scale
-        }
+    fun setImage(image: MinamoImage?) {
+        tileCache.image = image
+        this.scale = -1.0f
+        repaint()
     }
 
     fun reset() {
-        val imageSize = tileCache.image?.size ?: return
-
-        scaleType(size.toMinamoSize(), imageSize).let { (offset, scale) ->
-            this.offset = offset
-            this.scale = scale
-        }
+        this.scale = -1.0f
         repaint()
     }
 
@@ -95,6 +81,12 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
                 ceil(tile.region.height * scale).roundToInt()
             )
 
+//            if (tileRect overlaps MinamoRect(MinamoIntOffset.Zero, size.toMinamoSize())) {
+//                tile.load()
+//            } else {
+//                tile.unload()
+//            }
+//
             val loadTimer = System.currentTimeMillis()
 
             if (tileRect overlaps MinamoRect(MinamoIntOffset.Zero, size.toMinamoSize())) {
@@ -108,13 +100,20 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
 
             val drawTimer = System.currentTimeMillis()
 
-            g.drawImage(
-                tile.tile?.image,
-                offset.x + (tile.region.x * scale).roundToInt(),
-                offset.y + (tile.region.y * scale).roundToInt(),
-                ceil(tile.region.width * scale).toInt(),
-                ceil(tile.region.height * scale).roundToInt(),
-                null
+//            g.drawImage(
+//                tile.tile?.image,
+//                offset.x + (tile.region.x * scale).roundToInt(),
+//                offset.y + (tile.region.y * scale).roundToInt(),
+//                ceil(tile.region.width * scale).toInt(),
+//                ceil(tile.region.height * scale).roundToInt(),
+//                null
+//            )
+
+            g.drawRect(
+                tileRect.x,
+                tileRect.y,
+                tileRect.width,
+                tileRect.height
             )
 
             drawAcc += (System.currentTimeMillis() - drawTimer).toInt()

@@ -48,8 +48,10 @@ class TileCache {
             val image = image ?: return
 
             if (level > 0) {
+//                image.subsample(1 shl level).use{
                 image.resize(1 / (1 shl level).toFloat()).use {
                     val (cached, mask) = it.sink(MinamoSize(256, 256), 256, 0) { image, rect ->
+                        if (image != cached) return@sink
                         onTileLoaded?.invoke(image, rect)
                     }
 
@@ -58,6 +60,7 @@ class TileCache {
                 }
             } else {
                 val (cached, mask) = image.sink(MinamoSize(256, 256), 256, 0) { image, rect ->
+                    if (image != cached) return@sink
                     onTileLoaded?.invoke(image, rect)
                 }
 

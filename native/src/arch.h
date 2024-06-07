@@ -2,11 +2,12 @@
 
 #ifdef __ANDROID__
 
-#define JNIENV_PTR(env) (env)
+#define FIND_CLASS(env, name) (*env)->FindClass(env, name)
+
 
 #else
 
-#define JNIENV_PTR(env) ((void**) env)
+#define FIND_CLASS(env, name) (*env)->FindClass(env, "L" name ";")
 
 #endif
 
