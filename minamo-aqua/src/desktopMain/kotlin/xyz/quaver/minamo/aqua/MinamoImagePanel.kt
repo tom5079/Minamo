@@ -81,12 +81,6 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
                 ceil(tile.region.height * scale).roundToInt()
             )
 
-//            if (tileRect overlaps MinamoRect(MinamoIntOffset.Zero, size.toMinamoSize())) {
-//                tile.load()
-//            } else {
-//                tile.unload()
-//            }
-//
             val loadTimer = System.currentTimeMillis()
 
             if (tileRect overlaps MinamoRect(MinamoIntOffset.Zero, size.toMinamoSize())) {
@@ -100,21 +94,21 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
 
             val drawTimer = System.currentTimeMillis()
 
-//            g.drawImage(
-//                tile.tile?.image,
-//                offset.x + (tile.region.x * scale).roundToInt(),
-//                offset.y + (tile.region.y * scale).roundToInt(),
-//                ceil(tile.region.width * scale).toInt(),
-//                ceil(tile.region.height * scale).roundToInt(),
-//                null
-//            )
-
-            g.drawRect(
-                tileRect.x,
-                tileRect.y,
-                tileRect.width,
-                tileRect.height
+            g.drawImage(
+                tile.tile?.image,
+                offset.x + (tile.region.x * scale).roundToInt(),
+                offset.y + (tile.region.y * scale).roundToInt(),
+                ceil(tile.region.width * scale).toInt(),
+                ceil(tile.region.height * scale).roundToInt(),
+                null
             )
+
+//            g.drawRect(
+//                tileRect.x,
+//                tileRect.y,
+//                tileRect.width,
+//                tileRect.height
+//            )
 
             drawAcc += (System.currentTimeMillis() - drawTimer).toInt()
             lossDraw += if (tile.tile == null) (System.currentTimeMillis() - drawTimer).toInt() else 0

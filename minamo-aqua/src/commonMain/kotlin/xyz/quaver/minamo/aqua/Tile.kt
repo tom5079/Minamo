@@ -34,11 +34,13 @@ class TileCache {
             level = 0
         }
     var level = -1
+        @Synchronized
         set(value) {
             val sanitized = value.coerceAtLeast(0)
             if (field == sanitized) return
             field = sanitized
 
+            println("Closing $cached $mask")
             cached?.close()
             mask?.close()
 
@@ -48,8 +50,7 @@ class TileCache {
             val image = image ?: return
 
             if (level > 0) {
-//                image.subsample(1 shl level).use{
-                image.resize(1 / (1 shl level).toFloat()).use {
+                image.subsample(1 shl level).use{
                     val (cached, mask) = it.sink(MinamoSize(256, 256), 256, 0) { image, rect ->
                         if (image != cached) return@sink
                         onTileLoaded?.invoke(image, rect)

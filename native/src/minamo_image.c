@@ -2,77 +2,9 @@
 #include <stdint.h>
 #include <vips/vips.h>
 #include <turbojpeg.h>
-#include <pthread.h>
 
 #include "arch.h"
-
-typedef struct _MinamoSinkData {
-    JavaVM *jvm;
-    pthread_mutex_t mutex;
-    jobject classLoader;
-    jobject notify;
-} MinamoSinkData;
-
-static void MinamoSinkData_dispose_cb(VipsObject *object, MinamoSinkData* data) {
-    jint attached;
-    JNIEnv *env;
-
-    jint res = (*data->jvm)->GetEnv(data->jvm, (void**) &env, JNI_VERSION_1_6);
-    if (res == JNI_EDETACHED) {
-        res = (*data->jvm)->AttachCurrentThread(data->jvm, (void**) &env, NULL);
-
-        if (res == JNI_OK) {
-            attached = JNI_TRUE;
-        } else {
-            attached = JNI_FALSE;
-            return;
-        }
-    } else if (res == JNI_OK) {
-        attached = JNI_FALSE;
-    } else {
-        return;
-    }
-
-    pthread_mutex_lock(&data->mutex);
-
-    (*env)->DeleteGlobalRef(env, data->notify);
-    (*env)->DeleteGlobalRef(env, data->classLoader);
-
-    data->notify = NULL;
-    data->classLoader = NULL;
-
-    pthread_mutex_unlock(&data->mutex);
-
-    if (attached) {
-        (*data->jvm)->DetachCurrentThread(data->jvm);
-    }
-
-    g_free(data);
-
-    return;
-}
-
-MinamoSinkData* MinamoSinkData_new(JNIEnv *env, jobject notify, VipsObject* object) {
-    MinamoSinkData* data = g_new(MinamoSinkData, 1);
-    (*env)->GetJavaVM(env, &data->jvm);
-    data->notify = (*env)->NewGlobalRef(env, notify);
-
-    pthread_mutex_init(&data->mutex, NULL);
-
-    {
-        jclass notifyClass = (*env)->GetObjectClass(env, notify);
-        jclass classClass = (*env)->GetObjectClass(env, notifyClass);
-        jmethodID getClassLoader = (*env)->GetMethodID(env, classClass, "getClassLoader", "()Ljava/lang/ClassLoader;");
-        jobject classLoader = (*env)->CallObjectMethod(env, notifyClass, getClassLoader);
-        data->classLoader = (*env)->NewGlobalRef(env, classLoader);
-    }
-
-    if (object) {
-        g_signal_connect(object, "postclose", G_CALLBACK(MinamoSinkData_dispose_cb), data);
-    }
-
-    return data;
-}
+#include "minamo_sink_callback.h"
 
 VipsImage* MinamoImage_getVipsImage(JNIEnv *env, jobject this) {
     jclass class = (*env)->GetObjectClass(env, this);
@@ -299,59 +231,20 @@ Java_xyz_quaver_minamo_MinamoImageImpl_subsample(JNIEnv *env, jobject this,
     return (*env)->NewObject(env, class, constructor, (jlong) subsampledImage);
 }
 
-void MinamoImage_sink_notify(VipsImage* image, VipsRect* rect, void* data) {
-    MinamoSinkData* sinkData = (MinamoSinkData*) data;
+void minamo_sink_notify(VipsImage* image, VipsRect* rect, void* data) {
+    MinamoSinkCallback* cb = (MinamoSinkCallback*) data;
 
-    jint attached;
-    JNIEnv* env;
+    g_object_ref(cb);
 
-    jint res = (*sinkData->jvm)->GetEnv(sinkData->jvm, (void**) &env, JNI_VERSION_1_6);
-    if (res == JNI_EDETACHED) {
-        res = (*sinkData->jvm)->AttachCurrentThread(sinkData->jvm, (void**) &env, NULL);
+    minamo_sink_callback_invoke(cb, image, rect);
 
-        if (res == JNI_OK) {
-            attached = JNI_TRUE;
-        } else {
-            attached = JNI_FALSE;
-            return;
-        }
-    } else if (res == JNI_OK) {
-        attached = JNI_FALSE;
-    } else {
-        return;
-    }
+    g_object_unref(cb);
+}
 
-    pthread_mutex_lock(&sinkData->mutex);
+void minamo_sink_close_cb(VipsObject* object, void* data) {
+    MinamoSinkCallback* cb = (MinamoSinkCallback*) data;
 
-    if (!sinkData->notify || !sinkData->classLoader) {
-        pthread_mutex_unlock(&sinkData->mutex);
-        return;
-    }
-
-    jobject classLoader = sinkData->classLoader;
-    jmethodID loadClass = (*env)->GetMethodID(env, (*env)->GetObjectClass(env, classLoader), "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
-
-    jclass minamoImageClass = (jclass) (*env)->CallObjectMethod(env, classLoader, loadClass, (*env)->NewStringUTF(env, "xyz.quaver.minamo.MinamoImageImpl"));
-    jmethodID minamoImageConstructor = (*env)->GetMethodID(env, minamoImageClass, "<init>", "(J)V");
-    jobject minamoImage = (*env)->NewObject(env, minamoImageClass, minamoImageConstructor, (jlong) image);
-
-    jclass minamoRectClass = (jclass) (*env)->CallObjectMethod(env, classLoader, loadClass, (*env)->NewStringUTF(env, "xyz.quaver.minamo.MinamoRect"));
-    jmethodID minamoRectConstructor = (*env)->GetMethodID(env, minamoRectClass, "<init>", "(IIII)V");
-    jobject minamoRect = (*env)->NewObject(env, minamoRectClass, minamoRectConstructor, rect->left, rect->top, rect->width, rect->height);
-
-    jclass callbackClass = (*env)->GetObjectClass(env, sinkData->notify);
-    jmethodID notify = (*env)->GetMethodID(env, callbackClass, "invoke", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
-
-    jobject result = (*env)->CallObjectMethod(env, sinkData->notify, notify, minamoImage, minamoRect);
-
-    (*env)->DeleteLocalRef(env, minamoImage);
-    (*env)->DeleteLocalRef(env, minamoRect);
-
-    pthread_mutex_unlock(&sinkData->mutex);
-
-    if (attached) {
-        (*sinkData->jvm)->DetachCurrentThread(sinkData->jvm);
-    }
+    g_object_unref(cb);
 }
 
 JNIEXPORT jobject JNICALL
@@ -376,13 +269,20 @@ Java_xyz_quaver_minamo_MinamoImageImpl_sink(JNIEnv *env, jobject this,
     JavaVM* jvm;
     (*env)->GetJavaVM(env, &jvm);
 
-    MinamoSinkData* data = MinamoSinkData_new(env, notify, VIPS_OBJECT(cached));
+    MinamoSinkCallback* cb = minamo_sink_callback_new(env, notify);
 
-    if (vips_sink_screen(image, cached, mask, tileWidth, tileHeight, maxTiles, priority, MinamoImage_sink_notify, data)) {
+    g_signal_connect(cached, "close", G_CALLBACK(minamo_sink_close_cb), cb);
+
+    if (vips_sink_screen(image, cached, mask, tileWidth, tileHeight, maxTiles, priority, minamo_sink_notify, cb)) {
         VIPS_UNREF(cached);
         VIPS_UNREF(mask);
+        printf("Failed to sink\n");
+        fflush(stdout);
         return NULL;
     }
+
+    printf("Returning %p %p with data %p\n", cached, mask, cb);
+    fflush(stdout);
 
     jobject cachedMinamoImage, maskMinamoImage;
     {
@@ -392,6 +292,9 @@ Java_xyz_quaver_minamo_MinamoImageImpl_sink(JNIEnv *env, jobject this,
         cachedMinamoImage = (*env)->NewObject(env, class, constructor, (jlong) g_steal_pointer(&cached));
         maskMinamoImage = (*env)->NewObject(env, class, constructor, (jlong) g_steal_pointer(&mask));
     }
+
+    printf("which are: %p %p\n", cachedMinamoImage, maskMinamoImage);
+    fflush(stdout);
 
     jobject retval;
     {
@@ -447,11 +350,11 @@ Java_xyz_quaver_minamo_MinamoImageImpl_load(
     if (vips_image_guess_interpretation(image) != VIPS_INTERPRETATION_sRGB) {
         VipsImage *tmp;
         if (vips_colourspace(image, &tmp, VIPS_INTERPRETATION_sRGB, NULL)) {
-            g_object_unref(image);
+            VIPS_UNREF(image);
             return (jlong) NULL;
         }
 
-        g_object_unref(image);
+        VIPS_UNREF(image);
         image = tmp;
     }
 
@@ -467,7 +370,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_close(JNIEnv *env, jobject this) {
     VipsImage *image =
         (VipsImage *)((*env)->CallLongMethod(env, this, getVipsImage));
 
-    g_object_unref(G_OBJECT(image));
+    VIPS_UNREF(image);
 
     jfieldID vipsImageField =
         (*env)->GetFieldID(env, class, "_vipsImage", "J");
