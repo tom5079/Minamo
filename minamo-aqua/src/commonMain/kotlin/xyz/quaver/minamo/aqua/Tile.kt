@@ -40,7 +40,6 @@ class TileCache {
             if (field == sanitized) return
             field = sanitized
 
-            println("Closing $cached $mask")
             cached?.close()
             mask?.close()
 

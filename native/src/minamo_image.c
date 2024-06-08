@@ -276,13 +276,8 @@ Java_xyz_quaver_minamo_MinamoImageImpl_sink(JNIEnv *env, jobject this,
     if (vips_sink_screen(image, cached, mask, tileWidth, tileHeight, maxTiles, priority, minamo_sink_notify, cb)) {
         VIPS_UNREF(cached);
         VIPS_UNREF(mask);
-        printf("Failed to sink\n");
-        fflush(stdout);
         return NULL;
     }
-
-    printf("Returning %p %p with data %p\n", cached, mask, cb);
-    fflush(stdout);
 
     jobject cachedMinamoImage, maskMinamoImage;
     {
@@ -292,9 +287,6 @@ Java_xyz_quaver_minamo_MinamoImageImpl_sink(JNIEnv *env, jobject this,
         cachedMinamoImage = (*env)->NewObject(env, class, constructor, (jlong) g_steal_pointer(&cached));
         maskMinamoImage = (*env)->NewObject(env, class, constructor, (jlong) g_steal_pointer(&mask));
     }
-
-    printf("which are: %p %p\n", cachedMinamoImage, maskMinamoImage);
-    fflush(stdout);
 
     jobject retval;
     {
