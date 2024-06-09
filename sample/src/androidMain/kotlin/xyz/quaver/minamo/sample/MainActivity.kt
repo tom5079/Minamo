@@ -3,6 +3,7 @@ package xyz.quaver.minamo.sample
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,6 +32,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+
+            if (image != null) {
+                BackHandler {
+                    image?.close()
+                    image = null
+                }
+            }
+
             MaterialTheme {
                 if (image == null) {
                     Button(

@@ -12,7 +12,7 @@ fun main() = singleWindowApplication {
 
     DisposableEffect(Unit) {
         image =
-            loadImageFromFile("/home/tom5079/Downloads/53648696062_3677f341b7_o.jpg")
+            loadImageFromFile("/home/tom5079/Downloads/Telegram Desktop/_A_message_from_God_Washington,_D_C_,_March_12_The_Chairman_of_the.tif")
 
         onDispose {
             image?.close()

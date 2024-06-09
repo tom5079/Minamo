@@ -6,6 +6,9 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.util.Log
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.SurfaceView
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -31,11 +34,37 @@ class MinamoImageView(
             if (field == value) return;
             field = value
             tileCache.level = -log2(value).toInt()
-            repaint()
         }
 
     private var scaleType = ScaleTypes.CENTER_INSIDE
-    var bound: Bound = Bounds.FORCE_OVERLAP_OF_CENTER
+    var bound: Bound = Bounds.FORCE_OVERLAP
+
+    private val gestureListener = object: GestureDetector.SimpleOnGestureListener() {
+        override fun onDown(e: MotionEvent): Boolean {
+            return true
+        }
+
+        override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+            offset = MinamoIntOffset(offset.x - distanceX.roundToInt(), offset.y - distanceY.roundToInt())
+            repaint()
+            return true
+        }
+    }
+
+    private val scaleListener = object: ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(detector: ScaleGestureDetector): Boolean {
+            scale *= detector.scaleFactor
+            offset = MinamoIntOffset(
+                (offset.x - (detector.focusX - offset.x) * (detector.scaleFactor - 1)).roundToInt(),
+                (offset.y - (detector.focusY - offset.y) * (detector.scaleFactor - 1)).roundToInt()
+            )
+            repaint()
+            return true
+        }
+    }
+
+    private val gestureDetector = GestureDetector(context, gestureListener)
+    private val scaleGestureDetector = ScaleGestureDetector(context, scaleListener)
 
     private fun repaint() = CoroutineScope(coroutineContext).launch {
         mutex.withLock {
@@ -54,16 +83,24 @@ class MinamoImageView(
 
             val imageSize = tileCache.image?.size
             val size = MinamoSize(canvas.width, canvas.height)
+
+            var offset = offset
+            var scale = scale
+
             if (scale < 0 && imageSize != null) {
-                scaleType(size, imageSize).let { (offset, scale) ->
-                    this@MinamoImageView.offset = offset
-                    this@MinamoImageView.scale = scale
+                scaleType(size, imageSize).let { (newOffset, newScale) ->
+                    this@MinamoImageView.offset = newOffset
+                    this@MinamoImageView.scale = newScale
+                    offset = newOffset
+                    scale = newScale
                 }
             }
             bound(offset, scale, imageSize ?: MinamoSize.Zero, size)
-                .let { (offset, scale) ->
-                    this@MinamoImageView.offset = offset
-                    this@MinamoImageView.scale = scale
+                .let { (newOffset, newScale) ->
+                    this@MinamoImageView.offset = newOffset
+                    this@MinamoImageView.scale = newScale
+                    offset = newOffset
+                    scale = newScale
                 }
 
             val paint = Paint().apply {
@@ -122,6 +159,12 @@ class MinamoImageView(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         repaint()
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        gestureDetector.onTouchEvent(event)
+        scaleGestureDetector.onTouchEvent(event)
+        return true
     }
 
     companion object {

@@ -1,18 +1,20 @@
 package xyz.quaver.minamo.aqua
 
+import kotlinx.coroutines.sync.Mutex
 import xyz.quaver.minamo.*
 import kotlin.math.min
 
 class Tile(
     val image: MinamoImage,
     val mask: MinamoImage?,
+    val x: Int,
+    val y: Int,
     val region: MinamoRect,
-    val level: Int,
     var tile: MinamoNativeImage? = null
 ) {
     fun load() {
         if (tile != null) return
-        val decodeRegion = region.scale(1 / (1 shl level).toFloat(), origin = MinamoIntOffset.Zero)
+        val decodeRegion = MinamoRect(x * 256, y * 256, min(image.width - x * 256, 256), min(image.height - y * 256, 256))
         val valid = mask?.decode(decodeRegion)?.pixelAt(0, 0)?.and(0xff) != 0
         tile = image.decode(decodeRegion).let {
             if (valid) it else null
@@ -34,7 +36,6 @@ class TileCache {
             level = 0
         }
     var level = -1
-        @Synchronized
         set(value) {
             val sanitized = value.coerceAtLeast(0)
             if (field == sanitized) return
@@ -77,9 +78,10 @@ class TileCache {
 
     var onTileLoaded: ((MinamoImage, MinamoRect) -> Unit)? = null
 
-    val tiles = mutableListOf<Tile>()
+    private val mutex = Mutex()
 
-    val tileCount: Pair<Int, Int>
+    private val tiles = mutableListOf<Tile>()
+    private val tileCount: Pair<Int, Int>
         get() {
             val width = image?.width ?: 0
             val height = image?.height ?: 0
@@ -97,7 +99,6 @@ class TileCache {
 
         for (y in 0 until tileCountY) {
             for (x in 0 until tileCountX) {
-
                 val imageRegion = MinamoRect(
                     x shl (level + tileSize),
                     y shl (level + tileSize),
@@ -105,7 +106,7 @@ class TileCache {
                     min(1 shl (level + tileSize), image.height - (y shl (level + tileSize)))
                 )
 
-                tiles.add(Tile(cached ?: image, mask, imageRegion, level, null))
+                tiles.add(Tile(cached ?: image, mask, x, y, imageRegion))
             }
         }
     }
