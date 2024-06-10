@@ -1,6 +1,5 @@
 package xyz.quaver.minamo.aqua
 
-import kotlinx.coroutines.sync.Mutex
 import xyz.quaver.minamo.*
 import kotlin.math.min
 
@@ -9,12 +8,15 @@ class Tile(
     val mask: MinamoImage?,
     val x: Int,
     val y: Int,
-    val region: MinamoRect,
-    var tile: MinamoNativeImage? = null
+    val region: MinamoRect
 ) {
+    var tile: MinamoNativeImage? = null
+        private set
+
     fun load() {
         if (tile != null) return
-        val decodeRegion = MinamoRect(x * 256, y * 256, min(image.width - x * 256, 256), min(image.height - y * 256, 256))
+        val decodeRegion =
+            MinamoRect(x * 256, y * 256, min(image.width - x * 256, 256), min(image.height - y * 256, 256))
         val valid = mask?.decode(decodeRegion)?.pixelAt(0, 0)?.and(0xff) != 0
         tile = image.decode(decodeRegion).let {
             if (valid) it else null
@@ -32,12 +34,11 @@ class TileCache {
             if (field === value) return
 
             field = value
-            tiles.clear()
             level = 0
         }
     var level = -1
-        set(value) {
-            val sanitized = value.coerceAtLeast(0)
+        set(level) {
+            val sanitized = level.coerceAtLeast(0)
             if (field == sanitized) return
             field = sanitized
 
@@ -50,7 +51,7 @@ class TileCache {
             val image = image ?: return
 
             if (level > 0) {
-                image.subsample(1 shl level).use{
+                image.subsample(1 shl level).use {
                     val (cached, mask) = it.sink(MinamoSize(256, 256), 256, 0) { image, rect ->
                         if (image != cached) return@sink
                         onTileLoaded?.invoke(image, rect)
@@ -78,7 +79,10 @@ class TileCache {
 
     var onTileLoaded: ((MinamoImage, MinamoRect) -> Unit)? = null
 
-    private val mutex = Mutex()
+    @Synchronized
+    fun forEachTiles(action: (Tile) -> Unit) {
+        tiles.forEach(action)
+    }
 
     private val tiles = mutableListOf<Tile>()
     private val tileCount: Pair<Int, Int>
@@ -91,6 +95,7 @@ class TileCache {
             )
         }
 
+    @Synchronized
     private fun populateTiles() {
         val (tileCountX, tileCountY) = tileCount
         val image = image ?: return

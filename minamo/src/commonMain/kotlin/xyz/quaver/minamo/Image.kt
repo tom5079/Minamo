@@ -5,7 +5,6 @@ package xyz.quaver.minamo
 import kotlin.math.roundToInt
 
 typealias VipsImagePtr = Long
-typealias VipsRegionPtr = Long
 
 expect class MinamoNativeImage
 

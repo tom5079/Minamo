@@ -1,22 +1,22 @@
 package xyz.quaver.minamo.aqua
 
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.Rect
 import android.util.AttributeSet
-import android.util.Log
-import android.view.GestureDetector
-import android.view.MotionEvent
-import android.view.ScaleGestureDetector
-import android.view.SurfaceView
+import android.view.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import xyz.quaver.minamo.*
 import kotlin.math.ceil
 import kotlin.math.log2
 import kotlin.math.roundToInt
+
+private inline fun <R> SurfaceHolder.useCanvas(block: (Canvas) -> R) {
+    val canvas = lockCanvas() ?: return
+    block(canvas)
+    unlockCanvasAndPost(canvas)
+}
 
 class MinamoImageView(
     context: Context,
@@ -30,16 +30,11 @@ class MinamoImageView(
 
     var offset: MinamoIntOffset = MinamoIntOffset.Zero
     var scale: Float = -1.0f
-        set(value) {
-            if (field == value) return;
-            field = value
-            tileCache.level = -log2(value).toInt()
-        }
 
     private var scaleType = ScaleTypes.CENTER_INSIDE
     var bound: Bound = Bounds.FORCE_OVERLAP
 
-    private val gestureListener = object: GestureDetector.SimpleOnGestureListener() {
+    private val gestureListener = object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean {
             return true
         }
@@ -51,7 +46,7 @@ class MinamoImageView(
         }
     }
 
-    private val scaleListener = object: ScaleGestureDetector.SimpleOnScaleGestureListener() {
+    private val scaleListener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             scale *= detector.scaleFactor
             offset = MinamoIntOffset(
@@ -66,28 +61,47 @@ class MinamoImageView(
     private val gestureDetector = GestureDetector(context, gestureListener)
     private val scaleGestureDetector = ScaleGestureDetector(context, scaleListener)
 
-    private fun repaint() = CoroutineScope(coroutineContext).launch {
-        mutex.withLock {
-            val canvas = run {
-                var canvas = holder.lockCanvas()
+    private var surfaceReady = false
+    private var redrawOnReady = false
 
-                while (canvas == null) {
-                    delay(100)
-                    canvas = holder.lockCanvas()
+    init {
+        holder.addCallback(object : SurfaceHolder.Callback {
+            override fun surfaceCreated(holder: SurfaceHolder) {
+                surfaceReady = true
+                if (redrawOnReady) {
+                    redrawOnReady = false
+                    repaint()
                 }
-
-                canvas
             }
 
+            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+                repaint()
+            }
+
+            override fun surfaceDestroyed(holder: SurfaceHolder) {
+                surfaceReady = false
+            }
+        })
+    }
+
+    private fun repaint() = CoroutineScope(coroutineContext).launch {
+        if (!surfaceReady) {
+            redrawOnReady = true
+            return@launch
+        }
+
+        holder.useCanvas { canvas ->
             canvas.drawColor(Color.WHITE)
 
-            val imageSize = tileCache.image?.size
+            tileCache.level = -log2(scale).toInt()
+
+            val imageSize = kotlin.runCatching { tileCache.image?.size }.getOrNull() ?: return@useCanvas
             val size = MinamoSize(canvas.width, canvas.height)
 
             var offset = offset
             var scale = scale
 
-            if (scale < 0 && imageSize != null) {
+            if (scale < 0) {
                 scaleType(size, imageSize).let { (newOffset, newScale) ->
                     this@MinamoImageView.offset = newOffset
                     this@MinamoImageView.scale = newScale
@@ -95,7 +109,7 @@ class MinamoImageView(
                     scale = newScale
                 }
             }
-            bound(offset, scale, imageSize ?: MinamoSize.Zero, size)
+            bound(offset, scale, imageSize, size)
                 .let { (newOffset, newScale) ->
                     this@MinamoImageView.offset = newOffset
                     this@MinamoImageView.scale = newScale
@@ -103,13 +117,7 @@ class MinamoImageView(
                     scale = newScale
                 }
 
-            val paint = Paint().apply {
-                isAntiAlias = true
-                color = Color.RED
-                style = Paint.Style.STROKE
-            }
-
-            tileCache.tiles.forEach { tile: Tile ->
+            tileCache.forEachTiles { tile: Tile ->
                 val tileRect = MinamoRect(
                     offset.x + (tile.region.x * scale).roundToInt(),
                     offset.y + (tile.region.y * scale).roundToInt(),
@@ -131,17 +139,7 @@ class MinamoImageView(
                         null
                     )
                 }
-
-                canvas.drawRect(
-                    tileRect.x.toFloat(),
-                    tileRect.y.toFloat(),
-                    tileRect.x.toFloat() + tileRect.width.toFloat(),
-                    tileRect.y.toFloat() + tileRect.height.toFloat(),
-                    paint
-                )
             }
-
-            holder.unlockCanvasAndPost(canvas)
         }
     }
 
@@ -149,12 +147,6 @@ class MinamoImageView(
         tileCache.image = image
 
         this.scale = -1.0f
-        repaint()
-    }
-
-    fun reset() {
-        this.scale = -1.0f
-        repaint()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -170,7 +162,6 @@ class MinamoImageView(
     companion object {
         @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
         private val coroutineContext = newSingleThreadContext("minamo_aqua_render_thread")
-        private val mutex = Mutex()
     }
 
 }

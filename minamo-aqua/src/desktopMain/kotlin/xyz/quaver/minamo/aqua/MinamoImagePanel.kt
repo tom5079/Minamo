@@ -9,7 +9,6 @@ import java.awt.event.MouseWheelListener
 import javax.swing.JPanel
 import javax.swing.event.MouseInputListener
 import kotlin.math.ceil
-import kotlin.math.log2
 import kotlin.math.roundToInt
 
 private fun Dimension.toMinamoSize() = MinamoSize(width, height)
@@ -21,12 +20,6 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
 
     var offset: MinamoIntOffset = MinamoIntOffset.Zero
     var scale: Float = -1.0f
-        set(value) {
-            if (field == value) return;
-            field = value
-            tileCache.level = -log2(value).toInt()
-            repaint()
-        }
 
     private var scaleType = ScaleTypes.CENTER_INSIDE
     var bound: Bound = Bounds.FORCE_OVERLAP_OF_CENTER
@@ -73,7 +66,7 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
         var lossDraw = 0
         var count = 0
 
-        tileCache.tiles.forEach { tile ->
+        tileCache.forEachTiles { tile ->
             val tileRect = MinamoRect(
                 offset.x + (tile.region.x * scale).roundToInt(),
                 offset.y + (tile.region.y * scale).roundToInt(),

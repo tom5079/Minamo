@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
                             MinamoImageView(context)
                         },
                         update = { view ->
-                            image?.let { view.setImage(it) }
+                            view.setImage(image)
                         }
                     )
                 }
