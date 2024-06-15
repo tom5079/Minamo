@@ -32,7 +32,7 @@ class MinamoImageView(
     var scale: Float = -1.0f
 
     private var scaleType = ScaleTypes.CENTER_INSIDE
-    var bound: Bound = Bounds.FORCE_OVERLAP
+    var bound: Bound = Bounds.FORCE_OVERLAP_OR_CENTER
 
     private val gestureListener = object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean {

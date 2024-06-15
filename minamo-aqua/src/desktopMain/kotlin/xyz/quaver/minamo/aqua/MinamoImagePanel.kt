@@ -22,7 +22,7 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
     var scale: Float = -1.0f
 
     private var scaleType = ScaleTypes.CENTER_INSIDE
-    var bound: Bound = Bounds.FORCE_OVERLAP_OF_CENTER
+    var bound: Bound = Bounds.FORCE_OVERLAP_OR_CENTER
 
     init {
         addMouseListener(this)
@@ -61,11 +61,6 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
                 this.scale = scale
             }
 
-        var loadAcc = 0
-        var drawAcc = 0
-        var lossDraw = 0
-        var count = 0
-
         tileCache.forEachTiles { tile ->
             val tileRect = MinamoRect(
                 offset.x + (tile.region.x * scale).roundToInt(),
@@ -74,18 +69,11 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
                 ceil(tile.region.height * scale).roundToInt()
             )
 
-            val loadTimer = System.currentTimeMillis()
-
             if (tileRect overlaps MinamoRect(MinamoIntOffset.Zero, size.toMinamoSize())) {
                 tile.load()
-                count += 1
             } else {
                 tile.unload()
             }
-
-            loadAcc += (System.currentTimeMillis() - loadTimer).toInt()
-
-            val drawTimer = System.currentTimeMillis()
 
             g.drawImage(
                 tile.tile?.image,
@@ -95,20 +83,6 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
                 ceil(tile.region.height * scale).roundToInt(),
                 null
             )
-
-//            g.drawRect(
-//                tileRect.x,
-//                tileRect.y,
-//                tileRect.width,
-//                tileRect.height
-//            )
-
-            drawAcc += (System.currentTimeMillis() - drawTimer).toInt()
-            lossDraw += if (tile.tile == null) (System.currentTimeMillis() - drawTimer).toInt() else 0
-        }
-
-        if (loadAcc > 50 || drawAcc > 50) {
-            println("!!!Loading $loadAcc ms Drawing $drawAcc ms Loss $lossDraw ms Count $count average ${loadAcc / count.toFloat()}ms")
         }
     }
 

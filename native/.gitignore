@@ -1,2 +1,4 @@
 build/
 build*/
+
+cmake/toolchain-windows.cmake

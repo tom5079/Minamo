@@ -59,8 +59,6 @@ export LD=$TOOLCHAIN/bin/ld
 export RANLIB=$TOOLCHAIN/bin/llvm-ranlib
 export STRIP=$TOOLCHAIN/bin/llvm-strip
 
-echo $CC
-
 cat << EOF > "cmake/cross-file-${1}.txt"
 [host_machine]
 system = 'android'

@@ -17,6 +17,7 @@ ExternalProject_Add(ep_heif
         -DCMAKE_FIND_ROOT_PATH=${CMAKE_FIND_ROOT_PATH}
         -DWITH_DAV1D=ON
         -DWITH_LIBDE265=ON
+        -DWITH_RAV1E=OFF
         -DWITH_X265=OFF
         -DWITH_AOM_DECODER=OFF
         -DWITH_AOM_ENCODER=OFF

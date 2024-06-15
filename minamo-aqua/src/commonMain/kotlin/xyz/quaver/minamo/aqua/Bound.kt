@@ -31,7 +31,7 @@ object Bounds {
         newOffset to newScale
     }
 
-    val FORCE_OVERLAP_OF_CENTER: Bound =
+    val FORCE_OVERLAP_OR_CENTER: Bound =
         bound@{ offset, scale, (imageWidth, imageHeight), (canvasWidth, canvasHeight) ->
             val thresh = max(canvasWidth / imageWidth.toFloat(), canvasHeight / imageHeight.toFloat())
             val minScale = min(canvasWidth / imageWidth.toFloat(), canvasHeight / imageHeight.toFloat())
