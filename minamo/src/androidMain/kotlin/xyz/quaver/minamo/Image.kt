@@ -4,7 +4,11 @@ import android.graphics.Bitmap
 
 actual class MinamoNativeImage(
     val bitmap: Bitmap
-)
+) : AutoCloseable {
+    override fun close() {
+        bitmap.recycle()
+    }
+}
 
 actual fun MinamoNativeImage.pixelAt(x: Int, y: Int): Int {
     return bitmap.getPixel(x, y)
@@ -18,6 +22,9 @@ class MinamoImageImpl internal constructor(
             check(_vipsImage != 0L) { "tried to access closed VipsImage" }
             return _vipsImage
         }
+
+    override val isClosed: Boolean
+        get() = _vipsImage == 0L
 
     override val hasAlpha: Boolean
         get() = hasAlpha(vipsImage)

@@ -82,6 +82,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
 
         (*env)->ReleaseIntArrayElements(env, dataArray, data, 0);
     }
+    g_object_unref(region);
 
     jobject bitmap;
     {
@@ -357,16 +358,17 @@ JNIEXPORT void JNICALL
 Java_xyz_quaver_minamo_MinamoImageImpl_close(JNIEnv *env, jobject this) {
     jclass class = (*env)->GetObjectClass(env, this);
 
-    jmethodID getVipsImage =
-        (*env)->GetMethodID(env, class, "getVipsImage", "()J");
+    jfieldID vipsImageField =
+        (*env)->GetFieldID(env, class, "_vipsImage", "J");
+
     VipsImage *image =
-        (VipsImage *)((*env)->CallLongMethod(env, this, getVipsImage));
+        (VipsImage *)((*env)->GetLongField(env, this, vipsImageField));
+    
+    if (image == NULL) {
+        return;
+    }
 
     VIPS_UNREF(image);
 
-    jfieldID vipsImageField =
-        (*env)->GetFieldID(env, class, "_vipsImage", "J");
     (*env)->SetLongField(env, this, vipsImageField, 0L);
-
-    return;
 }

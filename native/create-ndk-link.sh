@@ -15,7 +15,6 @@ LIBRARIES=(
     "libgthread-2.0.so"
     "libexpat.so"
     "libexif.so"
-    "libjpeg.so"
     "libtiff.so"
     "libspng.so"
     "libfftw3.so"

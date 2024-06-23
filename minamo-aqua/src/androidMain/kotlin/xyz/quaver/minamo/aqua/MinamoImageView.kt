@@ -3,11 +3,16 @@ package xyz.quaver.minamo.aqua
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.*
 import kotlinx.coroutines.*
-import xyz.quaver.minamo.*
+import kotlinx.coroutines.sync.Semaphore
+import xyz.quaver.minamo.MinamoImage
+import xyz.quaver.minamo.MinamoIntOffset
+import xyz.quaver.minamo.MinamoRect
+import xyz.quaver.minamo.MinamoSize
 import kotlin.math.ceil
 import kotlin.math.log2
 import kotlin.math.roundToInt
@@ -24,9 +29,8 @@ class MinamoImageView(
     defStyleAttr: Int = 0,
     defStyleRes: Int = 0
 ) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
-    private val tileCache: TileCache = TileCache().apply {
-        onTileLoaded = { _, _ -> repaint() }
-    }
+
+    private var tileCache: TileCache? = null
 
     var offset: MinamoIntOffset = MinamoIntOffset.Zero
     var scale: Float = -1.0f
@@ -65,6 +69,7 @@ class MinamoImageView(
     private var redrawOnReady = false
 
     init {
+        holder.setFormat(PixelFormat.RGBA_8888)
         holder.addCallback(object : SurfaceHolder.Callback {
             override fun surfaceCreated(holder: SurfaceHolder) {
                 surfaceReady = true
@@ -84,18 +89,22 @@ class MinamoImageView(
         })
     }
 
+    val repaintSemaphore = Semaphore(2)
+
     private fun repaint() = CoroutineScope(coroutineContext).launch {
         if (!surfaceReady) {
             redrawOnReady = true
             return@launch
         }
 
+        val tileCache = tileCache ?: return@launch
+
+        if (!repaintSemaphore.tryAcquire()) return@launch
+
         holder.useCanvas { canvas ->
             canvas.drawColor(Color.WHITE)
 
-            tileCache.level = -log2(scale).toInt()
-
-            val imageSize = kotlin.runCatching { tileCache.image?.size }.getOrNull() ?: return@useCanvas
+            val imageSize = kotlin.runCatching { tileCache.image.size }.getOrNull() ?: return@useCanvas
             val size = MinamoSize(canvas.width, canvas.height)
 
             var offset = offset
@@ -117,19 +126,22 @@ class MinamoImageView(
                     scale = newScale
                 }
 
-            tileCache.forEachTiles { tile: Tile ->
+            tileCache.level = -log2(scale).toInt()
+
+            val canvasRect = MinamoRect(
+                (-offset.x / scale).roundToInt(),
+                (-offset.y / scale).roundToInt(),
+                (width / scale).roundToInt(),
+                (height / scale).roundToInt()
+            )
+
+            tileCache.forEachTilesIn(canvasRect) { tile ->
                 val tileRect = MinamoRect(
                     offset.x + (tile.region.x * scale).roundToInt(),
                     offset.y + (tile.region.y * scale).roundToInt(),
                     ceil(tile.region.width * scale).toInt(),
                     ceil(tile.region.height * scale).roundToInt()
                 )
-
-                if (tileRect overlaps MinamoRect(MinamoIntOffset.Zero, size)) {
-                    tile.load()
-                } else {
-                    tile.unload()
-                }
 
                 tile.tile?.bitmap?.let { bitmap ->
                     canvas.drawBitmap(
@@ -141,11 +153,25 @@ class MinamoImageView(
                 }
             }
         }
+
+        repaintSemaphore.release()
+    }
+
+    override fun onDetachedFromWindow() {
+        tileCache?.close()
+        tileCache?.level = -1
+        super.onDetachedFromWindow()
     }
 
     fun setImage(image: MinamoImage?) {
-        tileCache.image = image
-
+        tileCache?.close()
+        tileCache = image?.let {
+            TileCache(image).apply {
+                onTileLoaded = { image, region ->
+                    repaint()
+                }
+            }
+        }
         this.scale = -1.0f
     }
 

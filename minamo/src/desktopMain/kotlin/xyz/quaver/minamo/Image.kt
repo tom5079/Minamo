@@ -5,7 +5,9 @@ import java.awt.image.BufferedImage
 
 actual class MinamoNativeImage(
     val image: Image
-)
+) : AutoCloseable {
+    override fun close() {}
+}
 
 actual fun MinamoNativeImage.pixelAt(x: Int, y: Int): Int {
     return when (image) {
@@ -22,6 +24,9 @@ class MinamoImageImpl internal constructor(
             check(_vipsImage != 0L) { "tried to access closed VipsImage" }
             return _vipsImage
         }
+
+    override val isClosed: Boolean
+        get() = _vipsImage == 0L
 
     override val hasAlpha: Boolean
         get() = hasAlpha(vipsImage)

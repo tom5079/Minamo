@@ -1,6 +1,9 @@
 package xyz.quaver.minamo.aqua
 
-import xyz.quaver.minamo.*
+import xyz.quaver.minamo.MinamoImage
+import xyz.quaver.minamo.MinamoIntOffset
+import xyz.quaver.minamo.MinamoRect
+import xyz.quaver.minamo.MinamoSize
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.event.MouseEvent
@@ -9,14 +12,13 @@ import java.awt.event.MouseWheelListener
 import javax.swing.JPanel
 import javax.swing.event.MouseInputListener
 import kotlin.math.ceil
+import kotlin.math.log2
 import kotlin.math.roundToInt
 
 private fun Dimension.toMinamoSize() = MinamoSize(width, height)
 
 class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
-    private val tileCache = TileCache().apply {
-        onTileLoaded = { _, _ -> repaint() }
-    }
+    private var tileCache: TileCache? = null
 
     var offset: MinamoIntOffset = MinamoIntOffset.Zero
     var scale: Float = -1.0f
@@ -31,7 +33,12 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
     }
 
     fun setImage(image: MinamoImage?) {
-        tileCache.image = image
+        tileCache?.close()
+        tileCache = image?.let {
+            TileCache(image).apply {
+                onTileLoaded = { _, _ -> repaint() }
+            }
+        }
         this.scale = -1.0f
         repaint()
     }
@@ -48,33 +55,31 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
             return
         }
 
-        val imageSize = tileCache.image?.size
-        if (scale < 0 && imageSize != null) {
+        val tileCache = tileCache ?: return
+
+        val imageSize = tileCache.image.size
+        if (scale < 0) {
             scaleType(size.toMinamoSize(), imageSize).let { (offset, scale) ->
                 this.offset = offset
                 this.scale = scale
             }
         }
-        bound(offset, scale, imageSize ?: MinamoSize.Zero, size.toMinamoSize())
+        bound(offset, scale, imageSize, size.toMinamoSize())
             .let { (offset, scale) ->
                 this.offset = offset
                 this.scale = scale
             }
 
-        tileCache.forEachTiles { tile ->
-            val tileRect = MinamoRect(
-                offset.x + (tile.region.x * scale).roundToInt(),
-                offset.y + (tile.region.y * scale).roundToInt(),
-                ceil(tile.region.width * scale).toInt(),
-                ceil(tile.region.height * scale).roundToInt()
-            )
+        tileCache.level = -log2(this.scale).toInt()
 
-            if (tileRect overlaps MinamoRect(MinamoIntOffset.Zero, size.toMinamoSize())) {
-                tile.load()
-            } else {
-                tile.unload()
-            }
+        val canvasRect = MinamoRect(
+            (-offset.x / scale).roundToInt(),
+            (-offset.y / scale).roundToInt(),
+            (width / scale).roundToInt(),
+            (height / scale).roundToInt()
+        )
 
+        tileCache.forEachTilesIn(canvasRect) { tile ->
             g.drawImage(
                 tile.tile?.image,
                 offset.x + (tile.region.x * scale).roundToInt(),
@@ -126,5 +131,6 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
             (offset.y - (e.y - offset.y) * (scale / this.scale - 1)).roundToInt()
         )
         this.scale = scale
+        repaint()
     }
 }

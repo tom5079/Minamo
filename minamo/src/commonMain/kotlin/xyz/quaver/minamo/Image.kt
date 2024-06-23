@@ -6,7 +6,7 @@ import kotlin.math.roundToInt
 
 typealias VipsImagePtr = Long
 
-expect class MinamoNativeImage
+expect class MinamoNativeImage : AutoCloseable
 
 expect fun MinamoNativeImage.pixelAt(x: Int, y: Int): Int
 
@@ -85,6 +85,7 @@ interface MinamoImage : AutoCloseable {
 
     val size: MinamoSize
         get() = MinamoSize(width, height)
+    val isClosed: Boolean
 
     fun decode(rect: MinamoRect = MinamoRect(0, 0, width, height)): MinamoNativeImage?
     fun resize(scale: Float): MinamoImage
