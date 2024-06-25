@@ -19,8 +19,7 @@ class MinamoImageImpl internal constructor(
 ) : VipsImage {
 
     internal constructor(source: ImageSource) : this() {
-        vipsImage = load(source.vipsSource)
-        check(vipsImage != 0L) { "failed to decode image" }
+        vipsImage = load(source.vipsSource).getOrThrow()
     }
 
     init {
@@ -46,10 +45,10 @@ class MinamoImageImpl internal constructor(
     external override fun close()
 
     override fun hashCode(): Int {
-        return _vipsImage.hashCode()
+        return vipsImage.hashCode()
     }
 
     override fun equals(other: Any?): Boolean {
-        return _vipsImage == (other as? MinamoImageImpl)?._vipsImage
+        return vipsImage == (other as? MinamoImageImpl)?.vipsImage
     }
 }

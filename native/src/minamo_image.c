@@ -5,22 +5,20 @@
 
 #include "arch.h"
 #include "minamo_sink_callback.h"
-#include "minamo_image.h"
+#include "minamo.h"
 
-VipsImage* MinamoImage_getVipsImage(JNIEnv *env, jobject this) {
-    jclass class = (*env)->GetObjectClass(env, this);
-
-    jmethodID getVipsImage =
-        (*env)->GetMethodID(env, class, "getVipsImage", "()J");
-    jlong image = (*env)->CallLongMethod(env, this, getVipsImage);
-
-    return (VipsImage *)image;
-}
+#define MINAMO_IMAGE_GET_VIPS_IMAGE(obj) ({ \
+    jclass class = (*env)->GetObjectClass(env, obj); \
+    jfieldID vipsImageField = (*env)->GetFieldID(env, class, "_vipsImage", "J"); \
+    VipsImage* image = (VipsImage *)(*env)->GetLongField(env, obj, vipsImageField); \
+    if (image == NULL) MINAMO_FAILURE("tried to access closed image"); \
+    image; \
+})
 
 JNIEXPORT jobject JNICALL
 Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
                                                   jobject rect) {
-    VipsImage* image = MinamoImage_getVipsImage(env, this);
+    VipsImage* image = MINAMO_IMAGE_GET_VIPS_IMAGE(this);
 
     size_t x, y, width, height;
     {
@@ -189,7 +187,7 @@ JNIEXPORT jobject JNICALL
 Java_xyz_quaver_minamo_MinamoImageImpl_resize(JNIEnv *env, jobject this,
     jfloat scale
 ) {
-    VipsImage* image = MinamoImage_getVipsImage(env, this);
+    VipsImage* image = MINAMO_IMAGE_GET_VIPS_IMAGE(this);
 
     VipsImage* resizedImage;
     if (image->Bands == 4) {
@@ -217,7 +215,7 @@ JNIEXPORT jobject JNICALL
 Java_xyz_quaver_minamo_MinamoImageImpl_subsample(JNIEnv *env, jobject this,
     jint xFactor, jint yFactor
 ) {
-    VipsImage* image = MinamoImage_getVipsImage(env, this);
+    VipsImage* image = MINAMO_IMAGE_GET_VIPS_IMAGE(this);
 
     VipsImage* subsampledImage;
     MINAMO_CHECK( vips_subsample(image, &subsampledImage, xFactor, yFactor, NULL) );
@@ -292,14 +290,13 @@ Java_xyz_quaver_minamo_MinamoImageImpl_sink(JNIEnv *env, jobject this,
     MINAMO_SUCCESS( retval );
 }
 
-JNIEXPORT jboolean JNICALL
-Java_xyz_quaver_minamo_MinamoImageImpl_hasAlpha(
-    JNIEnv *env,
-    jobject this,
-    jlong image
-) {
-    return vips_image_hasalpha((VipsImage *)image);
+JNIEXPORT jobject JNICALL
+Java_xyz_quaver_minamo_MinamoImageImpl_hasAlpha(JNIEnv *env, jobject this) {
+    VipsImage* image = MINAMO_IMAGE_GET_VIPS_IMAGE(this);
+    MINAMO_SUCCESS( vips_image_hasalpha(image) );
 }
+
+JNIEXPORT jboolean JNICLA
 
 JNIEXPORT jint JNICALL
 Java_xyz_quaver_minamo_MinamoImageImpl_getHeight(
@@ -351,7 +348,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_close(JNIEnv *env, jobject this) {
     jclass class = (*env)->GetObjectClass(env, this);
 
     jfieldID vipsImageField =
-        (*env)->GetFieldID(env, class, "_vipsImage", "J");
+        (*env)->GetFieldID(env, class, "vipsImage", "J");
 
     VipsImage *image =
         (VipsImage *)((*env)->GetLongField(env, this, vipsImageField));

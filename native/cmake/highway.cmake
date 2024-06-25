@@ -2,7 +2,7 @@ include(ExternalProject)
 
 ExternalProject_Add(ep_highway
     GIT_REPOSITORY      https://github.com/google/highway
-    GIT_TAG             1.1.0
+    GIT_TAG             1.2.0
     CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/fakeroot
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
