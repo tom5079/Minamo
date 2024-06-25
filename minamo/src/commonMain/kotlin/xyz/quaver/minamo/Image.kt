@@ -79,25 +79,44 @@ infix fun MinamoRect.overlaps(other: MinamoRect): Boolean {
 }
 
 interface MinamoImage : AutoCloseable {
-    val hasAlpha: Boolean
-    val height: Int
-    val width: Int
+    fun hasAlpha(): Result<Boolean>
+    fun size(): Result<MinamoSize>
 
-    val size: MinamoSize
-        get() = MinamoSize(width, height)
-    val isClosed: Boolean
+    fun decode(rect: MinamoRect): Result<MinamoNativeImage>
 
-    fun decode(rect: MinamoRect = MinamoRect(0, 0, width, height)): MinamoNativeImage?
-    fun resize(scale: Float): MinamoImage
-    fun subsample(xFactor: Int, yFactor: Int = xFactor): MinamoImage
+    fun resize(scale: Float): Result<MinamoImage>
+    fun subsample(xFactor: Int, yFactor: Int = xFactor): Result<MinamoImage>
+
+    fun copy(): Result<MinamoImage>
 
     fun sink(
         tileSize: MinamoSize,
         maxTiles: Int,
         priority: Int,
         notify: (MinamoImage, MinamoRect) -> Unit
-    ): Pair<MinamoImage, MinamoImage>
+    ): Result<Pair<MinamoImage, MinamoImage>>
 }
+
+class MinamoImageOperationScope internal constructor(image: MinamoImage) {
+    internal var result: Result<MinamoImage> = image.copy()
+
+    fun resize(scale: Float) {
+        val image = result.getOrNull() ?: return
+        result = image.use { it.resize(scale) }
+    }
+
+    fun subsample(xFactor: Int, yFactor: Int = xFactor) {
+        val image = result.getOrNull() ?: return
+        result = image.use { it.subsample(xFactor, yFactor) }
+    }
+}
+
+fun MinamoImage.apply(operations: MinamoImageOperationScope.() -> Unit): Result<MinamoImage> {
+    val scope = MinamoImageOperationScope(this)
+    operations.invoke(scope)
+    return scope.result
+}
+
 
 internal interface VipsImage : MinamoImage {
     val vipsImage: VipsImagePtr

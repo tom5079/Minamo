@@ -9,13 +9,8 @@ import android.util.AttributeSet
 import android.view.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Semaphore
-import xyz.quaver.minamo.MinamoImage
-import xyz.quaver.minamo.MinamoIntOffset
-import xyz.quaver.minamo.MinamoRect
-import xyz.quaver.minamo.MinamoSize
-import kotlin.math.ceil
-import kotlin.math.log2
-import kotlin.math.roundToInt
+import xyz.quaver.minamo.*
+import kotlin.math.*
 
 private inline fun <R> SurfaceHolder.useCanvas(block: (Canvas) -> R) {
     val canvas = lockCanvas() ?: return
@@ -38,20 +33,48 @@ class MinamoImageView(
     private var scaleType = ScaleTypes.CENTER_INSIDE
     var bound: Bound = Bounds.FORCE_OVERLAP_OR_CENTER
 
+    var flingJob: Job? = null
+
     private val gestureListener = object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean {
+            flingJob?.cancel()
             return true
         }
 
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+            flingJob?.cancel()
             offset = MinamoIntOffset(offset.x - distanceX.roundToInt(), offset.y - distanceY.roundToInt())
             repaint()
+            return true
+        }
+
+        override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+            flingJob?.cancel()
+            flingJob = CoroutineScope(coroutineContext).launch {
+                var vx = velocityX
+                var vy = velocityY
+
+                var timer = System.currentTimeMillis()
+                while (abs(vx) > 10 || abs(vy) > 10) {
+                    val currentTime = System.currentTimeMillis()
+                    val dt = (currentTime - timer) / 1000.0f
+                    timer = currentTime
+
+                    offset += MinamoIntOffset((vx * dt).roundToInt(), (vy * dt).roundToInt())
+                    val attenuation = exp(-dt * 10) // 36.7% every 100ms
+                    vx *= attenuation
+                    vy *= attenuation
+                    repaint()
+                    delay(5)
+                }
+            }
             return true
         }
     }
 
     private val scaleListener = object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
+            flingJob?.cancel()
             scale *= detector.scaleFactor
             offset = MinamoIntOffset(
                 (offset.x - (detector.focusX - offset.x) * (detector.scaleFactor - 1)).roundToInt(),
@@ -89,7 +112,7 @@ class MinamoImageView(
         })
     }
 
-    val repaintSemaphore = Semaphore(2)
+    private val repaintSemaphore = Semaphore(2)
 
     private fun repaint() = CoroutineScope(coroutineContext).launch {
         if (!surfaceReady) {

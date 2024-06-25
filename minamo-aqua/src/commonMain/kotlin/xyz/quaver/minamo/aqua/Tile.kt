@@ -17,15 +17,14 @@ class Tile(
     var mask: MinamoImage? = null
         internal set
 
-    fun load() {
-        if (tile != null) return
+    fun load(): Result<Unit> {
+        if (tile != null) return Result.success(Unit)
 
-        val image = image ?: return
-        if (image.isClosed) return
+        val image = image ?: return Result.success(Unit)
 
         val decodeRegion =
             MinamoRect(x * 256, y * 256, min(image.width - x * 256, 256), min(image.height - y * 256, 256))
-        val valid = mask?.decode(decodeRegion)?.pixelAt(0, 0)?.and(0xff) != 0
+        val valid = mask?.decode(decodeRegion)?.getOrThrow()?.pixelAt(0, 0)?.and(0xff) != 0
         tile = image.decode(decodeRegion).let { if (valid) it else null }
     }
 
@@ -36,6 +35,9 @@ class Tile(
 }
 
 class TileCache(val image: MinamoImage) {
+    var error: Throwable? = null
+        private set
+
     var level = -1
         set(level) {
             val sanitized = level.coerceIn(0, tiles.size - 1)
@@ -49,25 +51,23 @@ class TileCache(val image: MinamoImage) {
                 }
             }
 
-            if (image.isClosed) return
-
             val callback: (MinamoImage, MinamoRect) -> Unit = cb@{ image, rect ->
                 if (image != tiles[sanitized].first().image) return@cb
                 onTileLoaded?.invoke(image, rect)
             }
 
-            val (cached, mask) = if (sanitized > 0) {
-                image.subsample(1 shl sanitized).use {
-                    it.sink(MinamoSize(256, 256), 128, 0, callback)
-                }
-            } else {
-                image.sink(MinamoSize(256, 256), 128, 0, callback)
-            }
+            runCatching {
+                image.apply {
+                    if (sanitized > 0) subsample(1 shl sanitized)
+                }.getOrThrow().use {
+                    val (cached, mask) = it.sink(MinamoSize(256, 256), 128, 0, callback).getOrThrow()
 
-            tiles[sanitized].forEach {
-                it.image = cached
-                it.mask = mask
-            }
+                    tiles[sanitized].forEach { tile ->
+                        tile.image = cached
+                        tile.mask = mask
+                    }
+                }
+            }.onFailure { error = it }
         }
 
     private val tileSize = 8

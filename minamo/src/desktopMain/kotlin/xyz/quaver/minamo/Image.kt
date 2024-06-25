@@ -17,56 +17,40 @@ actual fun MinamoNativeImage.pixelAt(x: Int, y: Int): Int {
 }
 
 class MinamoImageImpl internal constructor(
-    private var _vipsImage: VipsImagePtr = 0L
+    override var vipsImage: VipsImagePtr = 0L
 ) : VipsImage {
-    override val vipsImage: VipsImagePtr
-        get() {
-            check(_vipsImage != 0L) { "tried to access closed VipsImage" }
-            return _vipsImage
-        }
-
-    override val isClosed: Boolean
-        get() = _vipsImage == 0L
-
-    override val hasAlpha: Boolean
-        get() = hasAlpha(vipsImage)
-    override val height: Int
-        get() = getHeight(vipsImage)
-    override val width: Int
-        get() = getWidth(vipsImage)
 
     internal constructor(source: ImageSource) : this() {
         val vipsImage = load(source.vipsSource)
         check(vipsImage != 0L) { "failed to decode image" }
-        _vipsImage = vipsImage
     }
 
     init {
         System.loadLibrary("minamo")
     }
 
-    external override fun decode(rect: MinamoRect): MinamoNativeImage?
-    external override fun resize(scale: Float): MinamoImage
-    external override fun subsample(xFactor: Int, yFactor: Int): MinamoImage
+    external override fun hasAlpha(): Result<Boolean>
+    external override fun size(): Result<MinamoSize>
+    external override fun decode(rect: MinamoRect): Result<MinamoNativeImage>
+    external override fun resize(scale: Float): Result<MinamoImage>
+    external override fun subsample(xFactor: Int, yFactor: Int): Result<MinamoImage>
 
     external override fun sink(
         tileSize: MinamoSize,
         maxTiles: Int,
         priority: Int,
         notify: (MinamoImage, MinamoRect) -> Unit
-    ): Pair<MinamoImage, MinamoImage>
+    ): Result<Pair<MinamoImage, MinamoImage>>
 
-    private external fun hasAlpha(image: VipsImagePtr): Boolean
-    private external fun getHeight(image: VipsImagePtr): Int
-    private external fun getWidth(image: VipsImagePtr): Int
+    external override fun copy(): Result<MinamoImage>
 
     private external fun load(image: VipsImagePtr): VipsImagePtr
     external override fun close()
     override fun hashCode(): Int {
-        return _vipsImage.hashCode()
+        return vipsImage.hashCode()
     }
 
     override fun equals(other: Any?): Boolean {
-        return _vipsImage == (other as? MinamoImageImpl)?._vipsImage
+        return vipsImage == (other as? MinamoImageImpl)?.vipsImage
     }
 }

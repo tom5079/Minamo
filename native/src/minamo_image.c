@@ -5,6 +5,7 @@
 
 #include "arch.h"
 #include "minamo_sink_callback.h"
+#include "minamo_image.h"
 
 VipsImage* MinamoImage_getVipsImage(JNIEnv *env, jobject this) {
     jclass class = (*env)->GetObjectClass(env, this);
@@ -39,20 +40,15 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
     VipsRect imageRect = {0, 0, image->Xsize, image->Ysize};
     VipsRect regionRect = {x, y, width, height};
 
-    if (!vips_rect_includesrect(&imageRect, &regionRect)) {
-        return NULL;
-    }
+    if (!vips_rect_includesrect(&imageRect, &regionRect))
+        MINAMO_FAILURE("Region is out of bounds");
 
-    if (image->BandFmt != VIPS_FORMAT_UCHAR) {
-        return NULL;
-    }
+    if (image->BandFmt != VIPS_FORMAT_UCHAR) 
+        MINAMO_FAILURE("Unsupported band format");
 
     VipsRegion *region = vips_region_new(image);
 
-    if (vips_region_prepare(region, &regionRect)) {
-        g_object_unref(region);
-        return NULL;
-    }
+    MINAMO_CHECK_1( vips_region_prepare(region, &regionRect), region );
 
     VipsPel *pel = VIPS_REGION_ADDR(region, x, y);
     size_t skip = VIPS_REGION_LSKIP(region);
@@ -186,7 +182,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
     (*env)->DeleteLocalRef(env, bufferedImage);
 #endif
 
-    return minamoImage;
+    MINAMO_SUCCESS( minamoImage );
 }
 
 JNIEXPORT jobject JNICALL
@@ -198,23 +194,23 @@ Java_xyz_quaver_minamo_MinamoImageImpl_resize(JNIEnv *env, jobject this,
     VipsImage* resizedImage;
     if (image->Bands == 4) {
         VipsImage *premultiplied, *resizedPremultiplied;
-        vips_premultiply(image, &premultiplied, NULL);
+        MINAMO_CHECK( vips_premultiply(image, &premultiplied, NULL) );
 
-        vips_resize(premultiplied, &resizedPremultiplied, scale, NULL);
+        MINAMO_CHECK_1( vips_resize(premultiplied, &resizedPremultiplied, scale, NULL), premultiplied );
 
-        vips_unpremultiply(resizedPremultiplied, &resizedImage, NULL);
+        MINAMO_CHECK_2( vips_unpremultiply(resizedPremultiplied, &resizedImage, NULL), premultiplied, resizedPremultiplied );
 
         VIPS_UNREF(premultiplied);
         VIPS_UNREF(resizedPremultiplied);
     } else {
-        vips_resize(image, &resizedImage, scale, NULL);
+        MINAMO_CHECK( vips_resize(image, &resizedImage, scale, NULL) );
     }
 
     jclass class = (*env)->GetObjectClass(env, this);
     jclass test = (*env)->GetSuperclass(env, class);
     jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(J)V");
     
-    return (*env)->NewObject(env, class, constructor, (jlong) resizedImage);
+    MINAMO_SUCCESS( (*env)->NewObject(env, class, constructor, (jlong) resizedImage) );
 }
 
 JNIEXPORT jobject JNICALL
@@ -224,12 +220,12 @@ Java_xyz_quaver_minamo_MinamoImageImpl_subsample(JNIEnv *env, jobject this,
     VipsImage* image = MinamoImage_getVipsImage(env, this);
 
     VipsImage* subsampledImage;
-    vips_subsample(image, &subsampledImage, xFactor, yFactor, NULL);
+    MINAMO_CHECK( vips_subsample(image, &subsampledImage, xFactor, yFactor, NULL) );
 
     jclass class = (*env)->GetObjectClass(env, this);
     jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(J)V");
 
-    return (*env)->NewObject(env, class, constructor, (jlong) subsampledImage);
+    MINAMO_SUCCESS( (*env)->NewObject(env, class, constructor, (jlong) subsampledImage) );
 }
 
 void minamo_sink_notify(VipsImage* image, VipsRect* rect, void* data) {
@@ -274,11 +270,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_sink(JNIEnv *env, jobject this,
 
     g_signal_connect(cached, "close", G_CALLBACK(minamo_sink_close_cb), cb);
 
-    if (vips_sink_screen(image, cached, mask, tileWidth, tileHeight, maxTiles, priority, minamo_sink_notify, cb)) {
-        VIPS_UNREF(cached);
-        VIPS_UNREF(mask);
-        return NULL;
-    }
+    MINAMO_CHECK_2( vips_sink_screen(image, cached, mask, tileWidth, tileHeight, maxTiles, priority, minamo_sink_notify, cb), cached, mask );
 
     jobject cachedMinamoImage, maskMinamoImage;
     {
@@ -297,7 +289,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_sink(JNIEnv *env, jobject this,
         retval = (*env)->NewObject(env, class, constructor, cachedMinamoImage, maskMinamoImage);
     }
 
-    return retval;
+    MINAMO_SUCCESS( retval );
 }
 
 JNIEXPORT jboolean JNICALL
