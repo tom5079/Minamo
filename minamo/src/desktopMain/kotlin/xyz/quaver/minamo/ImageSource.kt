@@ -1,23 +1,19 @@
 package xyz.quaver.minamo
 
-class FileImageSource(
-    file: String
-) : ImageSource {
-
-    private var _vipsSource: VipsSourcePtr = 0L
-    override val vipsSource: VipsSourcePtr
-        get() {
-            check(_vipsSource != 0L) { "tried to access closed VipsSource" }
-            return _vipsSource
-        }
+@Suppress("INAPPLICABLE_JVM_NAME")
+class FileImageSource(file: String) : ImageSource {
+    override var vipsSource: VipsSourcePtr
+        private set
 
     init {
         System.loadLibrary("minamo")
-        _vipsSource = load(file)
-        check(_vipsSource != 0L) { "failed to open image $file" }
+        vipsSource = load(file).also {
+            println(it)
+        }.getOrThrow()
     }
 
-    private external fun load(file: String): VipsSourcePtr
-
+    @JvmName("load")
+    private external fun load(file: String): Result<VipsSourcePtr>
+    @JvmName("close")
     external override fun close()
 }

@@ -23,8 +23,10 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
     var offset: MinamoIntOffset = MinamoIntOffset.Zero
     var scale: Float = -1.0f
 
-    private var scaleType = ScaleTypes.CENTER_INSIDE
+    var scaleType = ScaleTypes.CENTER_INSIDE
     var bound: Bound = Bounds.FORCE_OVERLAP_OR_CENTER
+
+    var onErrorListener: ((Throwable) -> Unit)? = null
 
     init {
         addMouseListener(this)
@@ -57,7 +59,10 @@ class MinamoImagePanel : JPanel(), MouseInputListener, MouseWheelListener {
 
         val tileCache = tileCache ?: return
 
-        val imageSize = tileCache.image.size
+        val imageSize = tileCache.image.size()
+            .onFailure { onErrorListener?.invoke(it) }
+            .getOrNull() ?: return
+
         if (scale < 0) {
             scaleType(size.toMinamoSize(), imageSize).let { (offset, scale) ->
                 this.offset = offset

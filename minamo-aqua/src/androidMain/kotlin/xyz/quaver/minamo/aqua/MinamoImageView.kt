@@ -30,10 +30,12 @@ class MinamoImageView(
     var offset: MinamoIntOffset = MinamoIntOffset.Zero
     var scale: Float = -1.0f
 
-    private var scaleType = ScaleTypes.CENTER_INSIDE
+    var scaleType = ScaleTypes.CENTER_INSIDE
     var bound: Bound = Bounds.FORCE_OVERLAP_OR_CENTER
 
-    var flingJob: Job? = null
+    var onErrorListener: ((Throwable) -> Unit)? = null
+
+    private var flingJob: Job? = null
 
     private val gestureListener = object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean {
@@ -127,7 +129,7 @@ class MinamoImageView(
         holder.useCanvas { canvas ->
             canvas.drawColor(Color.WHITE)
 
-            val imageSize = kotlin.runCatching { tileCache.image.size }.getOrNull() ?: return@useCanvas
+            val imageSize = tileCache.image.size().getOrNull() ?: return@useCanvas
             val size = MinamoSize(canvas.width, canvas.height)
 
             var offset = offset
@@ -192,6 +194,9 @@ class MinamoImageView(
             TileCache(image).apply {
                 onTileLoaded = { image, region ->
                     repaint()
+                }
+                onErrorListener = {
+                    this@MinamoImageView.onErrorListener?.invoke(it)
                 }
             }
         }

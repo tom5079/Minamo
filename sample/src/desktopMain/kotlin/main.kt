@@ -11,8 +11,9 @@ fun main() = singleWindowApplication {
     var image: MinamoImage? by remember { mutableStateOf(null) }
 
     DisposableEffect(Unit) {
-        image =
-            loadImageFromFile("/home/tom5079/Downloads/53648696062_3677f341b7_o.jpg")
+        image = loadImageFromFile("/home/tom5079/Downloads/53648696062_3677f341b7_o.jpg")
+            .onFailure { it.printStackTrace() }
+            .getOrNull()
 
         onDispose {
             image?.close()
@@ -23,6 +24,9 @@ fun main() = singleWindowApplication {
         modifier = Modifier.fillMaxSize(),
         factory = {
             MinamoImagePanel().apply {
+                onErrorListener = {
+                    it.printStackTrace()
+                }
                 setImage(image)
             }
         }

@@ -17,15 +17,17 @@ class Tile(
     var mask: MinamoImage? = null
         internal set
 
-    fun load(): Result<Unit> {
-        if (tile != null) return Result.success(Unit)
+    fun load(): Result<Unit> = runCatching {
+        if (tile != null) return@runCatching
 
-        val image = image ?: return Result.success(Unit)
+        val image = image ?: return@runCatching
+
+        val (width, height) = image.size().getOrThrow()
 
         val decodeRegion =
-            MinamoRect(x * 256, y * 256, min(image.width - x * 256, 256), min(image.height - y * 256, 256))
+            MinamoRect(x * 256, y * 256, min(width - x * 256, 256), min(height - y * 256, 256))
         val valid = mask?.decode(decodeRegion)?.getOrThrow()?.pixelAt(0, 0)?.and(0xff) != 0
-        tile = image.decode(decodeRegion).let { if (valid) it else null }
+        tile = image.decode(decodeRegion).getOrThrow().let { if (valid) it else null }
     }
 
     fun unload() {
@@ -35,8 +37,7 @@ class Tile(
 }
 
 class TileCache(val image: MinamoImage) {
-    var error: Throwable? = null
-        private set
+    var onErrorListener: ((Throwable) -> Unit)? = null
 
     var level = -1
         set(level) {
@@ -67,7 +68,7 @@ class TileCache(val image: MinamoImage) {
                         tile.mask = mask
                     }
                 }
-            }.onFailure { error = it }
+            }.onFailure { onErrorListener?.invoke(it) }
         }
 
     private val tileSize = 8
@@ -75,10 +76,15 @@ class TileCache(val image: MinamoImage) {
     var onTileLoaded: ((MinamoImage, MinamoRect) -> Unit)? = null
 
     private val tiles: List<List<Tile>> = buildList {
-        val imageWidth = image.width
-        val imageHeight = image.height
+        val (imageWidth, imageHeight) = image.size()
+            .onFailure { onErrorListener?.invoke(it) }
+            .getOrNull() ?: return@buildList
 
-        repeat(maxLevel() + 1) { level ->
+        val maxLevel = maxLevel()
+            .onFailure { onErrorListener?.invoke(it) }
+            .getOrNull() ?: return@buildList
+
+        repeat(maxLevel + 1) { level ->
             add(buildList {
                 val tileCountX = (imageWidth + (1 shl (level + tileSize)) - 1).ushr(level + tileSize)
                 val tileCountY = (imageHeight + (1 shl (level + tileSize)) - 1).ushr(level + tileSize)
@@ -88,8 +94,8 @@ class TileCache(val image: MinamoImage) {
                         val imageRegion = MinamoRect(
                             x shl (level + tileSize),
                             y shl (level + tileSize),
-                            min(1 shl (level + tileSize), image.width - (x shl (level + tileSize))),
-                            min(1 shl (level + tileSize), image.height - (y shl (level + tileSize)))
+                            min(1 shl (level + tileSize), imageWidth - (x shl (level + tileSize))),
+                            min(1 shl (level + tileSize), imageHeight - (y shl (level + tileSize)))
                         )
 
                         add(Tile(x, y, imageRegion))
@@ -106,7 +112,7 @@ class TileCache(val image: MinamoImage) {
         var countBelow = 0
 
         tiles[level].forEach { tile ->
-            if (tile.region overlaps region) tile.load()
+            if (tile.region overlaps region) tile.load().onFailure { onErrorListener?.invoke(it) }
         }
 
         tiles.forEachIndexed { tileLevel, tilesInLevel ->
@@ -165,10 +171,12 @@ class TileCache(val image: MinamoImage) {
         }
     }
 
-    private fun maxLevel(): Int {
+    private fun maxLevel(): Result<Int> = runCatching {
+        val (width, height) = image.size().getOrThrow()
+
         var maxLevel = 0
-        var tileWidth = (image.width - 1) shr tileSize
-        var tileHeight = (image.height - 1) shr tileSize
+        var tileWidth = (width - 1) shr tileSize
+        var tileHeight = (height - 1) shr tileSize
 
         while (tileWidth > 0 || tileHeight > 0) {
             tileWidth = tileWidth shr 1
@@ -176,6 +184,6 @@ class TileCache(val image: MinamoImage) {
             maxLevel += 1
         }
 
-        return maxLevel
+        maxLevel
     }
 }

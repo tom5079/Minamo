@@ -3,15 +3,14 @@
 #include <vips/vips.h>
 #include <turbojpeg.h>
 
-#include "arch.h"
 #include "minamo_sink_callback.h"
 #include "minamo.h"
 
 #define MINAMO_IMAGE_GET_VIPS_IMAGE(obj) ({ \
     jclass class = (*env)->GetObjectClass(env, obj); \
-    jfieldID vipsImageField = (*env)->GetFieldID(env, class, "_vipsImage", "J"); \
+    jfieldID vipsImageField = (*env)->GetFieldID(env, class, "vipsImage", "J"); \
     VipsImage* image = (VipsImage *)(*env)->GetLongField(env, obj, vipsImageField); \
-    if (image == NULL) MINAMO_FAILURE("tried to access closed image"); \
+    if (image == NULL) return MINAMO_FAILURE(MINAMO_EXCEPTION("MinamoImage: tried to access closed image")); \
     image; \
 })
 
@@ -39,10 +38,10 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
     VipsRect regionRect = {x, y, width, height};
 
     if (!vips_rect_includesrect(&imageRect, &regionRect))
-        MINAMO_FAILURE("Region is out of bounds");
+        return MINAMO_FAILURE(MINAMO_EXCEPTION("Region is out of bounds"));
 
     if (image->BandFmt != VIPS_FORMAT_UCHAR) 
-        MINAMO_FAILURE("Unsupported band format");
+        return MINAMO_FAILURE(MINAMO_EXCEPTION("Unsupported band format"));
 
     VipsRegion *region = vips_region_new(image);
 
@@ -180,7 +179,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_decode(JNIEnv *env, jobject this,
     (*env)->DeleteLocalRef(env, bufferedImage);
 #endif
 
-    MINAMO_SUCCESS( minamoImage );
+    return minamoImage;
 }
 
 JNIEXPORT jobject JNICALL
@@ -208,7 +207,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_resize(JNIEnv *env, jobject this,
     jclass test = (*env)->GetSuperclass(env, class);
     jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(J)V");
     
-    MINAMO_SUCCESS( (*env)->NewObject(env, class, constructor, (jlong) resizedImage) );
+    return (*env)->NewObject(env, class, constructor, (jlong) resizedImage);
 }
 
 JNIEXPORT jobject JNICALL
@@ -223,7 +222,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_subsample(JNIEnv *env, jobject this,
     jclass class = (*env)->GetObjectClass(env, this);
     jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(J)V");
 
-    MINAMO_SUCCESS( (*env)->NewObject(env, class, constructor, (jlong) subsampledImage) );
+    return (*env)->NewObject(env, class, constructor, (jlong) subsampledImage);
 }
 
 void minamo_sink_notify(VipsImage* image, VipsRect* rect, void* data) {
@@ -256,7 +255,7 @@ Java_xyz_quaver_minamo_MinamoImageImpl_sink(JNIEnv *env, jobject this,
         tileHeight = (*env)->GetIntField(env, tileSize, (*env)->GetFieldID(env, sizeClass, "height", "I"));
     }
 
-    VipsImage* image = MinamoImage_getVipsImage(env, this);
+    VipsImage* image = MINAMO_IMAGE_GET_VIPS_IMAGE(this);
 
     VipsImage* cached = vips_image_new();
     VipsImage* mask = vips_image_new();
@@ -287,60 +286,58 @@ Java_xyz_quaver_minamo_MinamoImageImpl_sink(JNIEnv *env, jobject this,
         retval = (*env)->NewObject(env, class, constructor, cachedMinamoImage, maskMinamoImage);
     }
 
-    MINAMO_SUCCESS( retval );
+    return retval;
 }
 
 JNIEXPORT jobject JNICALL
 Java_xyz_quaver_minamo_MinamoImageImpl_hasAlpha(JNIEnv *env, jobject this) {
     VipsImage* image = MINAMO_IMAGE_GET_VIPS_IMAGE(this);
-    MINAMO_SUCCESS( vips_image_hasalpha(image) );
+    return NEW_BOOLEAN_OBJECT(vips_image_hasalpha(image));
 }
 
-JNIEXPORT jboolean JNICLA
+JNIEXPORT jobject JNICALL
+Java_xyz_quaver_minamo_MinamoImageImpl_size(JNIEnv *env, jobject this) {
+    VipsImage* image = MINAMO_IMAGE_GET_VIPS_IMAGE(this);
 
-JNIEXPORT jint JNICALL
-Java_xyz_quaver_minamo_MinamoImageImpl_getHeight(
-    JNIEnv *env,
-    jobject this,
-    jlong image
-) {
-    return vips_image_get_height((VipsImage *)image);
+    jclass sizeClass = FIND_CLASS(env, "xyz/quaver/minamo/MinamoSize");
+    jmethodID constructor = (*env)->GetMethodID(env, sizeClass, "<init>", "(II)V");
+
+    return (*env)->NewObject(env, sizeClass, constructor, image->Xsize, image->Ysize);
 }
 
-JNIEXPORT jint JNICALL
-Java_xyz_quaver_minamo_MinamoImageImpl_getWidth(
-    JNIEnv *env,
-    jobject this,
-    jlong image
-) {
-    return vips_image_get_width((VipsImage *)image);
+JNIEXPORT jobject JNICALL
+Java_xyz_quaver_minamo_MinamoImageImpl_copy(JNIEnv *env, jobject this) {
+    VipsImage* image = MINAMO_IMAGE_GET_VIPS_IMAGE(this);
+
+    g_object_ref(image);
+
+    jclass class = (*env)->GetObjectClass(env, this);
+    jmethodID constructor = (*env)->GetMethodID(env, class, "<init>", "(J)V");
+
+    return (*env)->NewObject(env, class, constructor, (jlong) image);
 }
 
-JNIEXPORT jlong JNICALL
-Java_xyz_quaver_minamo_MinamoImageImpl_load(
-    JNIEnv *env,
-    jobject this,
-    jlong source
-) {
+JNIEXPORT jobject JNICALL
+Java_xyz_quaver_minamo_MinamoImageImpl_load(JNIEnv *env, jobject this, jlong source) {
+    VipsSource* sourcePtr = (VipsSource*) source;
+
+    if (sourcePtr == NULL)
+        return MINAMO_FAILURE(MINAMO_EXCEPTION("MinamoImage: invalid source"));
+
     VipsImage *image =
-        vips_image_new_from_source((VipsSource *)source, "", NULL);
-
-    if (!image) {
-        return (jlong) NULL;
-    }
+        vips_image_new_from_source(sourcePtr, "", NULL);
+    
+    MINAMO_CHECK(image == NULL);
 
     if (vips_image_guess_interpretation(image) != VIPS_INTERPRETATION_sRGB) {
         VipsImage *tmp;
-        if (vips_colourspace(image, &tmp, VIPS_INTERPRETATION_sRGB, NULL)) {
-            VIPS_UNREF(image);
-            return (jlong) NULL;
-        }
+        MINAMO_CHECK_1(vips_colourspace(image, &tmp, VIPS_INTERPRETATION_sRGB, NULL), image);
 
         VIPS_UNREF(image);
         image = tmp;
     }
 
-    return (jlong) image;
+    return NEW_LONG_OBJECT((jlong) image);
 }
 
 JNIEXPORT void JNICALL

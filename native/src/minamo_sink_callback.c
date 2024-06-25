@@ -1,6 +1,6 @@
 #include "minamo_sink_callback.h"
 
-#include "arch.h"
+#include "minamo.h"
 
 typedef struct _MinamoSinkCallback {
     GObject parent_instance;

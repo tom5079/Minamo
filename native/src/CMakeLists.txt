@@ -6,7 +6,7 @@ if(ANDROID)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -llog")
 endif()
 
-add_library(minamo SHARED imagesource/file.c imagesource/descriptor.c minamo_image.c arch.c minamo_sink_callback.c)
+add_library(minamo SHARED imagesource/file.c imagesource/descriptor.c minamo_image.c minamo_sink_callback.c)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(VIPS REQUIRED IMPORTED_TARGET vips)

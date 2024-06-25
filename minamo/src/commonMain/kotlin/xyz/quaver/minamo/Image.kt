@@ -80,11 +80,13 @@ infix fun MinamoRect.overlaps(other: MinamoRect): Boolean {
 
 interface MinamoImage : AutoCloseable {
     fun hasAlpha(): Result<Boolean>
+
     fun size(): Result<MinamoSize>
 
     fun decode(rect: MinamoRect): Result<MinamoNativeImage>
 
     fun resize(scale: Float): Result<MinamoImage>
+
     fun subsample(xFactor: Int, yFactor: Int = xFactor): Result<MinamoImage>
 
     fun copy(): Result<MinamoImage>

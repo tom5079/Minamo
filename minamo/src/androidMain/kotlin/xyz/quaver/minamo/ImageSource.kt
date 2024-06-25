@@ -3,6 +3,7 @@ package xyz.quaver.minamo
 import android.content.ContextWrapper
 import android.net.Uri
 
+@Suppress("INAPPLICABLE_JVM_NAME")
 internal class LocalUriImageSource(
     context: ContextWrapper,
     uri: Uri
@@ -19,6 +20,8 @@ internal class LocalUriImageSource(
         vipsSource = load(descriptor.fd).getOrThrow()
     }
 
+    @JvmName("load")
     private external fun load(descriptor: Int): Result<VipsSourcePtr>
+    @JvmName("close")
     external override fun close()
 }
