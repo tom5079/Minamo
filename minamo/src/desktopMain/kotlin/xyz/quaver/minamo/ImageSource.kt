@@ -7,9 +7,7 @@ class FileImageSource(file: String) : ImageSource {
 
     init {
         System.loadLibrary("minamo")
-        vipsSource = load(file).also {
-            println(it)
-        }.getOrThrow()
+        vipsSource = load(file).getOrThrow()
     }
 
     @JvmName("load")
