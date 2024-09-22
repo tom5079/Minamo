@@ -7,13 +7,12 @@ class FileImageSource(file: String) : ImageSource {
 
     init {
         System.loadLibrary("minamo")
-        vipsSource = load(file).also {
-            println(it)
-        }.getOrThrow()
+        vipsSource = load(file).getOrThrow()
     }
 
     @JvmName("load")
     private external fun load(file: String): Result<VipsSourcePtr>
+
     @JvmName("close")
     external override fun close()
 }

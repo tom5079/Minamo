@@ -20,4 +20,4 @@ dependencyResolutionManagement {
     }
 }
 
-include(":minamo", ":minamo-aqua", ":sample")
+include(":minamo", ":minamo-aqua", ":minamo-aqua-compose", ":sample")

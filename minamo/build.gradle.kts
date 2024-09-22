@@ -4,13 +4,19 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    `maven-publish`
+    signing
 }
 
 group = "xyz.quaver.minamo"
-version = "1.0-SNAPSHOT"
+version = libs.versions.minamo.get()
+
+val ossrhUsername: String by project
+val ossrhPassword: String by project
 
 kotlin {
     androidTarget {
+        publishLibraryVariants("release")
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
@@ -80,3 +86,44 @@ afterEvaluate {
     }
 }
 
+publishing {
+    repositories.maven {
+        val releasesRepoUrl = uri("https://oss.sonatype.org/service/local/staging/deploy/maven2")
+        val snapshotRepoUrl = uri("https://oss.sonatype.org/content/repositories/snapshots")
+
+        url = if (version.toString().endsWith("SNAPSHOT")) snapshotRepoUrl else releasesRepoUrl
+
+        credentials {
+            username = ossrhUsername
+            password = ossrhPassword
+        }
+    }
+
+    publications.withType<MavenPublication> {
+        pom {
+            name.set("minamo")
+            description.set("Image processing for Kotlin Multiplatform")
+            url.set("https://github.com/tom5079/minamo")
+            licenses {
+                license {
+                    name.set("The Apache License, Version 2.0")
+                    url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                }
+            }
+            developers {
+                developer {
+                    id.set("tom5079")
+                    email.set("7948651+tom5079@users.noreply.github.com")
+                }
+            }
+            scm {
+                connection.set("scm:git:git://github.com/tom5079/minamo.git")
+                url.set("https://github.com/tom5079/minamo")
+            }
+        }
+    }
+}
+
+signing {
+    sign(publishing.publications)
+}
